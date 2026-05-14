@@ -57,16 +57,25 @@ REGIONS_BY_LEVEL = {
 
 
 def all_region_targets():
-    """광역+(광역,시군구) 조합 모든 지역. (region_label, region_type) 리스트.
+    """발행 대상 지역. (region_label, region_type) 리스트.
 
-    region_label = 발행 글 region 컬럼에 들어갈 문자열.
-    글 키워드 "{region_label} {board}" 가 검색 키워드.
+    사장님 실 서비스 권역 한정 (2026-05-14):
+      광역 전체:  서울, 경기, 인천, 세종, 대전, 충남
+      충북 일부:  청주, 충주 만
     """
+    INCLUDE_FULL_REGIONS = {"서울", "경기", "인천", "세종", "대전", "충남"}
+    INCLUDE_CHUNGBUK_CITIES = {"청주시", "충주시"}
+
     out = []
     for r in REGIONS_BY_LEVEL["광역"]:
-        out.append((r, "광역"))
+        if r in INCLUDE_FULL_REGIONS:
+            out.append((r, "광역"))
     for parent, children in REGIONS_BY_LEVEL["시군구"].items():
-        for c in children:
-            # "경기 수원시", "서울 강남구" 식으로 결합
-            out.append((f"{parent} {c}", "시군구"))
+        if parent in INCLUDE_FULL_REGIONS:
+            for c in children:
+                out.append((f"{parent} {c}", "시군구"))
+        elif parent == "충북":
+            for c in children:
+                if c in INCLUDE_CHUNGBUK_CITIES:
+                    out.append((f"{parent} {c}", "시군구"))
     return out
