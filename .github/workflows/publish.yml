@@ -57,13 +57,21 @@ jobs:
           cache: pip
           cache-dependency-path: content-pipeline/requirements.txt
 
-      - name: Install deps
+      - name: Install Noto CJK font (for OG image text overlay)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+
+      - name: Install Python deps
         run: pip install -r content-pipeline/requirements.txt
 
       - name: Run publish cycle
         env:
           GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
           WORKER_API_TOKEN:      ${{ secrets.WORKER_API_TOKEN }}
+          R2_ACCOUNT_ID:         ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID:      ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
           WORKER_API:            https://ajasky.co.kr/api/posts
           SITE_DOMAIN:           ajasky.co.kr
           PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '0.825' }}

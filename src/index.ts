@@ -10,6 +10,8 @@ import {
 import { renderRobots } from './seo/robots';
 import { renderRss } from './seo/rss';
 import { buildThumbnailText } from './lib/thumbnail-text';
+import { parseBodyMarkdown } from './lib/markdown';
+import { NotFoundPage } from './templates/notfound';
 import apiRoutes from './routes/api';
 import { nearbyRegions } from './lib/regions';
 import {
@@ -183,10 +185,14 @@ app.get('/:boardSlug/:postSlug', async (c) => {
   ).bind(site.id, board.id, postSlug).first<Post>();
 
   if (post) {
-    // 실제 DB 글이 있는 경우 — Phase 4에서 body_md 파서가 들어옴. 지금은 dummy sections fallback
+    // body_md 마크다운 파서 → 9-섹션 추출. 파싱 실패 시 dummy fallback.
+    let sections = parseBodyMarkdown(post.body_md);
+    if (sections.length < 3) {
+      sections = buildDummySections(post.region, board.title);
+    }
     return renderPost({
       site, boards, board, post,
-      sections: buildDummySections(post.region, board.title),
+      sections,
       faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
     });
   }
@@ -236,5 +242,14 @@ async function getBoards(env: Env, siteId: number) {
 function safeJsonParse<T>(s: string): T | any {
   try { return JSON.parse(s); } catch { return [] as any; }
 }
+
+// 404 — 사이트 컨텍스트 살아있는 상태에서 디자인된 404 페이지 렌더
+app.notFound(async (c) => {
+  const site = c.get('site');
+  if (!site) return c.text('Not found', 404);
+  const boards = await getBoards(c.env, site.id);
+  const html = NotFoundPage({ site, boards, attemptedPath: new URL(c.req.url).pathname }).toString();
+  return new Response(html, { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
+});
 
 export default app;

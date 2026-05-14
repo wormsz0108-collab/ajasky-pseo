@@ -18,9 +18,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from generate import generate_post
+from image_pool import pick_photo_key
 from longtails import get_longtails, LONGTAILS_BY_BOARD
+from og_compose import compose_og
 from publish import publish, slugify_ko
+from r2_client import get_object, put_object
 from regions import all_region_targets
+
+
+def _split_board(board_title: str) -> tuple[str, str]:
+    """보드 → (ribbon, headline_main). thumbnail-text.ts 와 동일 로직."""
+    parts = board_title.split()
+    if len(parts) == 2:
+        return parts[1], parts[0]
+    # 접미사 분리
+    for suffix in ("차량", "작업차", "이용료", "작업"):
+        if board_title.endswith(suffix) and len(board_title) - len(suffix) >= 2:
+            return suffix, board_title[: -len(suffix)]
+    return "", board_title
 
 
 SITE_DOMAIN = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
@@ -45,9 +60,33 @@ def pick_target():
     return region, region_type, board_slug, board_title, longtail
 
 
+def build_og(slug: str, region: str, board_title: str) -> str:
+    """OG 이미지 합성 + R2 업로드. 실패 시 fallback URL.
+
+    글 slug 결정적 → 같은 slug 재시도해도 같은 source photo.
+    """
+    try:
+        photo_key = pick_photo_key(slug)
+        source_bytes = get_object(photo_key)
+        ribbon, head_main = _split_board(board_title)
+        composed = compose_og(
+            source_bytes,
+            ribbon=ribbon or region,
+            headline_prefix=region if ribbon else "",
+            headline_main=head_main,
+        )
+        og_key = f"og/{slug}.jpg"
+        put_object(og_key, composed, "image/jpeg")
+        return f"/media/{og_key}"
+    except Exception as e:
+        print(f"[warn] OG compose failed, using fallback: {e}", file=sys.stderr)
+        return "/media/hero.jpg"
+
+
 def build_payload(region: str, region_type: str, board_slug: str, board_title: str, longtail: str, generated: dict) -> dict:
     title = generated["title"]
     slug = slugify_ko(f"{region}-{board_title}-{longtail}")[:280]
+    og_url = build_og(slug, region, board_title)
 
     return {
         "site_domain": SITE_DOMAIN,
@@ -61,7 +100,7 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
         "body_md": generated["body_md"],
         "toc_json": json.dumps(generated.get("toc", []), ensure_ascii=False),
         "faq_json": json.dumps(generated.get("faq", []), ensure_ascii=False),
-        "og_image_url": "/media/hero.jpg",  # Phase 4.5에서 동적 합성으로 교체
+        "og_image_url": og_url,
     }
 
 
