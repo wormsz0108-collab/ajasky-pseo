@@ -128,11 +128,12 @@ footer a:hover{color:var(--text)}
 .pag .now{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* home — board overview */
-.boards-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin:24px 0 40px}
-.board-tile{text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:flex-end;aspect-ratio:1/1;background:#0f172a;color:#fff;border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
-.board-tile::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--accent) 0%,#000 100%);opacity:.85}
-.board-tile span{position:relative;font-weight:800;font-size:20px;letter-spacing:-.02em}
-.board-tile small{position:relative;display:block;font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;font-weight:500}
+.boards-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin:24px 0 40px}
+.board-tile{text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:center;align-items:center;aspect-ratio:1.4/1;background:#0f172a;color:#fff;border-radius:var(--radius);padding:14px;position:relative;overflow:hidden;text-align:center;transition:transform .2s ease}
+.board-tile::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--accent) 0%,#0f172a 100%);opacity:.9}
+.board-tile span{position:relative;font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.25}
+.board-tile small{position:relative;display:block;font-size:11px;color:rgba(255,255,255,.75);margin-top:4px;font-weight:500}
+.board-tile:hover{transform:translateY(-2px)}
 .board-tile:hover::before{opacity:1}
 
 .section-h{display:flex;align-items:baseline;justify-content:space-between;margin:36px 0 16px}
@@ -148,5 +149,9 @@ footer a:hover{color:var(--text)}
   .top-cta{padding:8px 12px;font-size:13px}
   .page-h h1{font-size:26px}
   footer .f-inner{grid-template-columns:1fr}
+  /* 모바일 보드 타일 — 2열 강제로 압축 (CTA에 빨리 닿게) */
+  .boards-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .board-tile{aspect-ratio:1.2/1;padding:12px}
+  .board-tile span{font-size:15px}
 }
 `;
