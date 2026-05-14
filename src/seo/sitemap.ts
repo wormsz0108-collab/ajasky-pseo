@@ -9,7 +9,20 @@ const xmlEscape = (s: string) =>
 const urlFor = (site: Site, path: string) =>
   `https://${site.domain}${path.startsWith('/') ? '' : '/'}${encodeURI(path)}`;
 
-const nowIso = () => new Date().toISOString();
+// 네이버 SA가 lastmod 의 밀리초 포함 ISO를 거부하는 경우가 있어 초 단위까지로 자름.
+// 또한 modified_at 가 'YYYY-MM-DD HH:MM:SS' (D1 기본) 형식이면 'T'로 합쳐 W3C Datetime 으로.
+const nowIso = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+const normalizeLastmod = (s: string | null | undefined): string => {
+  if (!s) return nowIso();
+  // 이미 'T' 포함된 ISO 8601 이면 밀리초만 제거
+  if (/T/.test(s)) return s.replace(/\.\d+(?=Z|[+-])/, '').replace(/(\d{2}:\d{2}:\d{2})(?!Z|[+-])/, '$1Z');
+  // 'YYYY-MM-DD HH:MM:SS' (D1 기본) → 'YYYY-MM-DDTHH:MM:SSZ'
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if (m) return `${m[1]}T${m[2]}Z`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return nowIso();
+};
 
 interface UrlEntry {
   loc: string;
@@ -51,7 +64,7 @@ export async function renderSitemapIndex(env: Env, site: Site): Promise<string> 
      WHERE site_id = ? AND status = 'published'`
   ).bind(site.id).first<{ c: number; m: string | null }>();
   const total = row?.c ?? 0;
-  const postsLastmod = row?.m ?? nowIso();
+  const postsLastmod = normalizeLastmod(row?.m);
   const numPostSitemaps = Math.max(1, Math.ceil(total / POSTS_PER_SITEMAP));
   const today = nowIso();
 
@@ -100,7 +113,7 @@ export async function renderPostsSitemap(env: Env, site: Site, n: number): Promi
   if (results.length === 0 && n > 1) return null;
   const entries: UrlEntry[] = results.map(r => ({
     loc: urlFor(site, `/${r.board_slug}/${r.slug}`),
-    lastmod: r.modified_at,
+    lastmod: normalizeLastmod(r.modified_at),
     changefreq: 'monthly',
     priority: 0.6,
   }));
