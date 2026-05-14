@@ -15,7 +15,7 @@ from typing import Any
 
 import google.generativeai as genai
 
-PROMPT_TEMPLATE_PATH = Path(__file__).parent / "prompt-template.txt"
+from prompts import build_prompt
 
 # Gemini에 강제할 응답 스키마 (response_schema 사용 시 SDK가 엄격 강제)
 RESPONSE_SCHEMA = {
@@ -48,9 +48,9 @@ RESPONSE_SCHEMA = {
 }
 
 
-def _load_prompt(region: str, board_title: str, longtail: str) -> str:
-    raw = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
-    return raw.format(region=region, board_title=board_title, longtail=longtail)
+def _load_prompt(region: str, board_title: str, longtail: str) -> tuple[str, dict]:
+    """다양화된 프롬프트 생성. 매 호출마다 다른 shape/제목/섹션 동의어."""
+    return build_prompt(region, board_title, longtail)
 
 
 def _configure_gemini() -> None:
@@ -81,7 +81,8 @@ def _safe_resp_text(resp) -> str:
 
 def generate_post(region: str, board_title: str, longtail: str, model_name: str = "gemini-2.5-flash") -> dict[str, Any]:
     _configure_gemini()
-    prompt = _load_prompt(region, board_title, longtail)
+    prompt, prompt_meta = _load_prompt(region, board_title, longtail)
+    print(f"[diversity] shape={prompt_meta['shape']} n_sections={prompt_meta['n_sections']} list_count={prompt_meta['list_count']} body_len={prompt_meta['min_chars']}~{prompt_meta['max_chars']}", flush=True)
     model = genai.GenerativeModel(model_name)
 
     for attempt in range(3):
