@@ -44,7 +44,7 @@ def generate_post(region: str, board_title: str, longtail: str, model_name: str 
                 },
             )
             text = _clean_json_text(resp.text)
-            data = json.loads(text)
+            data = _parse_json_lenient(text)
             _validate(data)
             return data
         except (json.JSONDecodeError, KeyError, ValueError) as e:
@@ -58,6 +58,21 @@ def generate_post(region: str, board_title: str, longtail: str, model_name: str 
                 raise
             time.sleep(2 ** attempt)
     raise RuntimeError("unreachable")
+
+
+def _parse_json_lenient(text: str) -> dict[str, Any]:
+    """엄격 파싱 실패 시 json-repair 로 복구. Gemini가 가끔 body_md 안에 raw \\n을 넣어 깨먹음."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        try:
+            from json_repair import repair_json
+        except ImportError as e:
+            raise json.JSONDecodeError(f"strict parse failed and json-repair missing: {e}", text, 0)
+        repaired = repair_json(text, return_objects=True)
+        if not isinstance(repaired, dict):
+            raise json.JSONDecodeError("repair did not yield object", text, 0)
+        return repaired
 
 
 def _clean_json_text(text: str) -> str:
