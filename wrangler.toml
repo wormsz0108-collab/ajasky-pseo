@@ -1,0 +1,21 @@
+name = "ajasky-pseo"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ajasky-pseo-db"
+database_id = "7eebc245-8566-443d-b0ff-143d17e70f80"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "ajasky-media"
+
+[vars]
+# WORKER_API_TOKEN_HASH 는 `wrangler secret put` 로 별도 등록 (커밋 X)
+
+# 도메인 라우팅 — 나중에 도메인 받으면 추가
+# routes = [
+#   { pattern = "ajasky.kr/*", custom_domain = true },
+# ]

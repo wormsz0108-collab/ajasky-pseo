@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전북 스카이차 비용 현장 사진 어떻게 찍어야 할까 | 아자스카이</title>
+<meta name="description" content="전북 스카이차 비용은 현장 사진 한 장으로 견적 편차가 크게 줄어듭니다. 안전한 작업 준비와 함께 살펴봅니다.">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+
+<style>
+  :root{
+    --bg:#ffffff;
+    --bg-soft:#f9fafb;
+    --text:#111827;
+    --text-soft:#4b5563;
+    --meta:#6b7280;
+    --line:#e5e7eb;
+    --line-strong:#d1d5db;
+    --brand:#1f2937;
+    --accent:#ec4899;        /* hot pink — 아자스카이 시그니처 */
+    --accent-soft:#fdf2f8;
+    --link:#1d4ed8;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Pretendard Variable","Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:17px;
+    line-height:1.8;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  img{max-width:100%;display:block;height:auto}
+
+  /* ---------- HEADER ---------- */
+  .top{
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:rgba(255,255,255,.92);
+    backdrop-filter:saturate(180%) blur(8px);
+    z-index:20;
+  }
+  .top-inner{
+    max-width:1180px;margin:0 auto;padding:14px 20px;
+    display:flex;align-items:center;gap:24px;
+  }
+  .logo{font-weight:700;font-size:18px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+  .logo .dot{width:10px;height:10px;border-radius:3px;background:var(--accent)}
+  .nav{display:flex;gap:18px;font-size:15px;color:var(--text-soft)}
+  .nav a{text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
+  .nav a.on,.nav a:hover{color:var(--text);border-bottom-color:var(--accent)}
+  .top-cta{
+    margin-left:auto;display:flex;align-items:center;gap:8px;
+    background:var(--accent);color:#fff;text-decoration:none;
+    padding:10px 16px;border-radius:999px;font-weight:600;font-size:15px;
+    box-shadow:0 6px 16px -6px rgba(220,38,38,.5);
+  }
+  .top-cta:hover{filter:brightness(1.08)}
+  .top-cta svg{width:16px;height:16px}
+
+  /* ---------- ARTICLE ---------- */
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 80px}
+  .breadcrumb{font-size:13px;color:var(--meta);margin-bottom:14px}
+  .breadcrumb a{color:var(--meta);text-decoration:none}
+  .breadcrumb .sep{margin:0 6px;opacity:.6}
+  h1{
+    font-size:30px;line-height:1.35;letter-spacing:-.02em;
+    margin:6px 0 12px;font-weight:800;
+  }
+  .meta{
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;
+    color:var(--meta);font-size:14px;margin-bottom:24px;
+  }
+  .pill{
+    background:var(--bg-soft);border:1px solid var(--line);
+    border-radius:999px;padding:3px 10px;font-size:13px;color:var(--text-soft);
+  }
+
+  /* hero image — 검색 썸네일 스타일이되 아자스카이만의 색다른 변형 */
+  .hero{
+    position:relative;aspect-ratio:1/1;background:#000;
+    border-radius:var(--radius);overflow:hidden;margin:0 0 28px;
+    box-shadow:0 18px 40px -18px rgba(15,23,42,.35);
+    container-type:inline-size;isolation:isolate;
+  }
+  .hero img{width:100%;height:100%;object-fit:cover;filter:brightness(.78) contrast(1.05)}
+
+  /* 좌측 세로 노란 띠 */
+  .hero .side{
+    position:absolute;top:0;bottom:0;left:0;width:7%;z-index:2;
+    background:#ffd200;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .hero .side .vt{
+    writing-mode:vertical-rl;transform:rotate(180deg);
+    font-weight:800;letter-spacing:.5em;color:#000;font-size:3cqw;
+  }
+
+  /* 좌상단 기울어진 빨간 지역 리본 */
+  .hero .ribbon{
+    position:absolute;top:8%;left:6%;z-index:3;
+    background:var(--accent);color:#fff;
+    padding:1.4cqw 3.6cqw 1.4cqw 3.6cqw;
+    font-weight:900;font-size:6cqw;letter-spacing:-.01em;
+    transform:rotate(-3deg);
+    box-shadow:0 6px 0 rgba(0,0,0,.35);
+    border-radius:4px;
+  }
+
+  /* 메인 헤드 — 흰 글자 + 두꺼운 검정 외곽선 + 노란 밑줄 강조 */
+  .hero .head{
+    position:absolute;left:10%;right:6%;top:30%;z-index:2;
+    color:#fff;font-family:"Pretendard Variable","Pretendard",sans-serif;
+    font-weight:900;line-height:1.02;letter-spacing:-.025em;
+    font-size:16cqw;
+    text-shadow:
+      -3px -3px 0 #000, 3px -3px 0 #000,
+      -3px 3px 0 #000, 3px 3px 0 #000,
+      0 -3px 0 #000, 0 3px 0 #000,
+      -3px 0 0 #000, 3px 0 0 #000;
+  }
+  .hero .head .underline{
+    display:inline-block;background:linear-gradient(180deg,transparent 60%,#ffd200 60%);
+    padding:0 .12em;
+  }
+
+  /* 하단 사선 브랜드 바 (사선 컷이 색다름) */
+  .hero .bar{
+    position:absolute;left:0;right:0;bottom:0;z-index:2;
+    background:#000;color:#fff;
+    padding:5.5cqw 5% 5cqw;text-align:center;
+    clip-path:polygon(0 18%, 100% 0, 100% 100%, 0 100%);
+  }
+  .hero .bar .tag{
+    font-size:2.6cqw;font-weight:600;color:#cfcfcf;
+    line-height:1.3;margin-bottom:1.6cqw;letter-spacing:-.01em;
+  }
+  .hero .bar .brand{
+    display:flex;align-items:center;justify-content:center;gap:3cqw;
+    font-size:4cqw;font-weight:900;letter-spacing:-.02em;
+  }
+  .hero .bar .brand .name{color:#ffd200}
+  .hero .bar .brand .dot{
+    width:1cqw;height:1cqw;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 .4cqw rgba(220,38,38,.25);
+  }
+  .hero .bar .brand .tel{color:#fff;font-variant-numeric:tabular-nums}
+
+  /* TOC */
+  .toc{
+    border:1px solid var(--line);background:var(--bg-soft);
+    border-radius:var(--radius);padding:18px 22px 16px;margin:0 0 36px;
+  }
+  .toc-h{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:.02em;
+  }
+  .toc-h .badge{font-size:11px;color:var(--meta);font-weight:500;background:#fff;border:1px solid var(--line);padding:2px 8px;border-radius:6px}
+  .toc ol{margin:6px 0 0;padding:0 0 0 0;list-style:none;counter-reset:toci}
+  .toc li{padding:5px 0;font-size:15px;color:var(--text-soft);counter-increment:toci;display:flex;gap:10px}
+  .toc li::before{content:counter(toci,decimal-leading-zero);color:var(--accent);font-weight:700;min-width:22px;font-variant-numeric:tabular-nums}
+  .toc a{text-decoration:none;color:inherit}
+  .toc a:hover{color:var(--text)}
+
+  /* body sections */
+  section h2{
+    font-size:22px;line-height:1.4;margin:48px 0 14px;font-weight:800;letter-spacing:-.01em;
+    display:flex;align-items:baseline;gap:10px;padding-bottom:10px;border-bottom:2px solid var(--text);
+  }
+  section h2 .num{
+    color:var(--accent);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;
+    min-width:28px;
+  }
+  section h3{
+    font-size:16px;margin:24px 0 8px;font-weight:700;color:var(--text);
+  }
+  section p{margin:12px 0;color:var(--text-soft)}
+  section ul,section ol{margin:10px 0 14px;padding-left:22px;color:var(--text-soft)}
+  section li{margin:4px 0}
+
+  .figure{
+    position:relative;margin:24px -10px;border-radius:var(--radius);overflow:hidden;
+    background:#0f172a;box-shadow:0 12px 28px -16px rgba(15,23,42,.3);
+  }
+  .figure img{width:100%;aspect-ratio:1/1;object-fit:cover;transition:transform .5s ease}
+  .figure:hover img{transform:scale(1.03)}
+  .figure::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(15,23,42,0) 50%,rgba(15,23,42,.7) 100%);
+  }
+  .figure .num-stamp{
+    position:absolute;top:12px;left:12px;z-index:2;
+    background:rgba(255,255,255,.95);color:var(--accent);
+    width:34px;height:34px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;
+  }
+  .figure figcaption{
+    position:absolute;left:16px;right:16px;bottom:14px;z-index:2;color:#fff;
+    font-size:13px;font-weight:500;text-shadow:0 2px 6px rgba(0,0,0,.4);
+    line-height:1.5;
+  }
+
+  /* inline phone CTA card */
+  .cta-card{
+    margin:36px 0;padding:18px 22px;background:linear-gradient(135deg,#fdf2f8 0%,#fff 100%);
+    border:1px solid #fbcfe8;border-radius:var(--radius);
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .cta-card .text{flex:1;min-width:200px}
+  .cta-card .text strong{display:block;font-size:16px;color:var(--text);margin-bottom:2px}
+  .cta-card .text span{font-size:13px;color:var(--text-soft)}
+  .cta-card .btns{display:flex;gap:8px}
+  .btn{
+    text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.outline{background:#fff;color:var(--text);border:1px solid var(--line-strong)}
+
+  /* FAQ */
+  .faq{margin-top:24px;border-top:1px solid var(--line)}
+  .faq-item{padding:18px 0;border-bottom:1px solid var(--line)}
+  .faq-q{font-weight:700;color:var(--text);margin:0 0 6px;font-size:16px;display:flex;gap:8px}
+  .faq-q .qmark{color:var(--accent);font-weight:800}
+  .faq-a{color:var(--text-soft);margin:0;padding-left:24px}
+
+  /* service area */
+  .region-list{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;
+  }
+  .region-list a{
+    text-decoration:none;background:var(--bg-soft);border:1px solid var(--line);
+    padding:6px 12px;border-radius:8px;font-size:13px;color:var(--text-soft);
+  }
+  .region-list a:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* footer */
+  footer{
+    border-top:1px solid var(--line);margin-top:64px;padding:40px 20px;background:var(--bg-soft);
+    color:var(--meta);font-size:13px;
+  }
+  footer .f-inner{max-width:1180px;margin:0 auto;display:grid;gap:18px;grid-template-columns:1fr 1fr 1fr}
+  footer h4{font-size:13px;margin:0 0 8px;color:var(--text);font-weight:700}
+  footer a{color:var(--meta);text-decoration:none}
+  footer a:hover{color:var(--text)}
+
+  /* DIFF banner — 사장님 컴펀용. Hono 옮길 때 제거 */
+  .diff{
+    position:fixed;right:18px;bottom:18px;width:340px;max-width:calc(100vw - 36px);
+    background:#0f172a;color:#e2e8f0;border-radius:14px;
+    padding:16px 18px;font-size:13px;line-height:1.6;
+    box-shadow:0 20px 40px -10px rgba(0,0,0,.35);
+    z-index:30;
+  }
+  .diff h5{margin:0 0 8px;font-size:13px;color:#fff;display:flex;align-items:center;gap:6px}
+  .diff h5 .tag{font-size:10px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+  .diff ul{margin:0;padding-left:18px}
+  .diff li{margin:3px 0}
+  .diff .close{position:absolute;top:8px;right:10px;cursor:pointer;color:#94a3b8;background:none;border:0;font-size:18px}
+
+  /* responsive */
+  @media (max-width:640px){
+    h1{font-size:24px}
+    section h2{font-size:19px}
+    .nav{display:none}
+    .top-cta{padding:8px 12px;font-size:13px}
+    .figure{margin-left:0;margin-right:0}
+    .diff{left:12px;right:12px;width:auto;bottom:12px}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="top">
+  <div class="top-inner">
+    <a class="logo" href="/"><span class="dot"></span>아자스카이</a>
+    <nav class="nav">
+      <a href="#" class="on">스카이차</a>
+      <a href="#">일대</a>
+      <a href="#">요금</a>
+      <a href="#">비용</a>
+      <a href="#">고소작업차량</a>
+    </nav>
+    <a class="top-cta" href="tel:01092490510">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      010-9249-0510
+    </a>
+  </div>
+</header>
+
+<article class="wrap">
+
+  <nav class="breadcrumb">
+    <a href="/">홈</a><span class="sep">›</span>
+    <a href="/스카이차-비용">스카이차 비용</a><span class="sep">›</span>
+    <span>전북 스카이차 비용 현장 사진 어떻게 찍어야 할까</span>
+  </nav>
+
+  <h1>전북 스카이차 비용, 현장 사진은 어떻게 찍어야 할까</h1>
+
+  <div class="meta">
+    <span>2026년 5월 14일</span>
+    <span>·</span>
+    <span>아자스카이</span>
+    <span class="pill">전북</span>
+    <span class="pill">스카이차 비용</span>
+  </div>
+
+  <div class="hero">
+    <img src="img/hero.jpg" alt="전북 스카이차 현장 작업 모습">
+    <div class="side"><span class="vt">AJASKY</span></div>
+    <span class="ribbon">전북</span>
+    <div class="head">
+      스카이차<br>
+      <span class="underline">비용</span>
+    </div>
+    <div class="bar">
+      <div class="tag">24시 전국 배차 / 안전 책임 작업</div>
+      <div class="brand">
+        <span class="name">아자스카이</span>
+        <span class="dot"></span>
+        <span class="tel">010-9249-0510</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-h"><span>목차</span><span class="badge">9 sections</span></div>
+    <ol>
+      <li><a href="#s1">전북 스카이차 비용</a></li>
+      <li><a href="#s2">전북 스카이차 선택</a></li>
+      <li><a href="#s3">전북 현장 체크</a></li>
+      <li><a href="#s4">진행 절차</a></li>
+      <li><a href="#s5">비용 기준</a></li>
+      <li><a href="#s6">주의할 점</a></li>
+      <li><a href="#s7">상담 팁</a></li>
+      <li><a href="#s8">자주 묻는 질문</a></li>
+      <li><a href="#s9">서비스 지역</a></li>
+    </ol>
+  </div>
+
+  <!-- 9 sections -->
+  <section id="s1">
+    <h2><span class="num">01</span>전북 스카이차 비용</h2>
+    <p>전북 스카이차 비용은 현장 한 장의 사진으로 견적 편차가 크게 줄어듭니다. 도로 폭과 장애물, 건물 외벽까지의 거리, 가시거리 등이 한눈에 보여야 작업 가능한 차량 종류가 결정됩니다. 비용은 단정 짓기보다 현장 변수에 맞춰 달라질 수 있다고 보시는 편이 좋습니다.</p>
+    <p>전북 지역은 도심부와 농어촌 지역의 작업 환경이 크게 달라, 사진 한 장의 정보가 견적 정확도에 미치는 영향이 큽니다.</p>
+  </section>
+
+  <section id="s2">
+    <h2><span class="num">02</span>전북 스카이차 선택</h2>
+    <p>전북에서 스카이차를 선택할 때는 작업 높이와 진입 가능 여부를 먼저 확인하는 편이 좋습니다.</p>
+    <h3>확인할 점</h3>
+    <ol>
+      <li>작업 지점까지의 실제 높이</li>
+      <li>접근로의 폭과 회전 반경</li>
+      <li>전선·간판·가로수 등 상부 장애물</li>
+      <li>작업 가능 시간대 (소음 민원 가능성)</li>
+    </ol>
+  </section>
+
+  <figure class="figure">
+    <span class="num-stamp">02</span>
+    <img src="img/sec.jpg" alt="협소 골목 현장">
+    <figcaption>협소 골목 현장은 차량 진입 가능 차종이 제한되어 비용 편차가 큽니다</figcaption>
+  </figure>
+
+  <!-- 두 번째 강한 썸네일형 (검색 결과에서 보일 보조 이미지) -->
+  <div class="hero" style="margin:36px 0">
+    <img src="img/sec.jpg" alt="전북 스카이차 비용 현장">
+    <div class="side"><span class="vt">AJASKY</span></div>
+    <span class="ribbon">전북</span>
+    <div class="head">
+      현장 사진<br>
+      <span class="underline">한 장</span>
+    </div>
+    <div class="bar">
+      <div class="tag">정확한 견적의 시작</div>
+      <div class="brand">
+        <span class="name">아자스카이</span>
+        <span class="dot"></span>
+        <span class="tel">010-9249-0510</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="s3">
+    <h2><span class="num">03</span>전북 현장 체크</h2>
+    <p>전북 현장 체크는 사진 3장이면 충분한 편입니다. 멀리서 한 장, 가까이서 한 장, 작업 지점을 올려다본 한 장입니다.</p>
+    <h3>체크리스트</h3>
+    <ul>
+      <li>도로에서 건물 외벽까지의 거리</li>
+      <li>1층 입구·주차장 진입 가능 여부</li>
+      <li>상부 전선이나 간판 위치</li>
+      <li>인접 건물과의 간격</li>
+      <li>주변 차량 통행량 (도로 점유 협의 필요 여부)</li>
+    </ul>
+  </section>
+
+  <section id="s4">
+    <h2><span class="num">04</span>진행 절차</h2>
+    <p>현장 사진 확인 후 견적, 작업일 협의, 차량 배차, 현장 도착, 안전 점검 순으로 진행됩니다.</p>
+    <h3>작업 흐름</h3>
+    <ol>
+      <li>전화 또는 카페로 현장 사진 전송</li>
+      <li>현장 변수 반영한 견적 제시</li>
+      <li>작업 일정과 시간 확정</li>
+      <li>차량 배차 및 안전 장구 점검</li>
+      <li>현장 도착 후 1차 안전 점검 → 작업 진행</li>
+    </ol>
+  </section>
+
+  <!-- CTA card mid-article -->
+  <div class="cta-card">
+    <div class="text">
+      <strong>전북 현장 사진만 보내주세요</strong>
+      <span>사진 3장이면 정확한 견적이 가능합니다</span>
+    </div>
+    <div class="btns">
+      <a class="btn primary" href="tel:01092490510">전화 상담</a>
+    </div>
+  </div>
+
+  <section id="s5">
+    <h2><span class="num">05</span>비용 기준</h2>
+    <p>비용은 차량 종류, 작업 높이, 현장 변수에 따라 달라질 수 있습니다.</p>
+    <h3>비용 결정 요소</h3>
+    <ul>
+      <li>스카이차 종류 (작업 가능 높이)</li>
+      <li>작업 시간 (반나절·하루)</li>
+      <li>현장 접근 난이도</li>
+      <li>야간·주말 여부</li>
+      <li>도로 점유 협의 필요 여부</li>
+    </ul>
+  </section>
+
+  <section id="s6">
+    <h2><span class="num">06</span>주의할 점</h2>
+    <p>작업 전 안전 점검을 충분히 진행하는 편이 좋습니다. 특히 상부 전선과 상호 통신은 사고 예방에 핵심입니다.</p>
+    <h3>실수 줄이기</h3>
+    <ul>
+      <li>작업자 안전 장구 사전 점검</li>
+      <li>주변 통행 차단·표지판 설치</li>
+      <li>상부 장애물 거리 측정</li>
+      <li>비상시 하강 절차 사전 공유</li>
+      <li>날씨(강풍·강우) 작업 가능 여부 확인</li>
+    </ul>
+  </section>
+
+  <section id="s7">
+    <h2><span class="num">07</span>상담 팁</h2>
+    <p>전화 상담 시 작업 지점 사진 3장과 작업 내용(외벽 청소·간판 설치·전기 작업 등)을 미리 알려주시면 정확한 답변이 빠릅니다. 사진은 카페 게시판이나 메시지로 전송할 수 있습니다.</p>
+  </section>
+
+  <section id="s8">
+    <h2><span class="num">08</span>자주 묻는 질문</h2>
+    <div class="faq">
+      <div class="faq-item">
+        <p class="faq-q"><span class="qmark">Q.</span> 전북 어느 지역까지 출장 가능한가요?</p>
+        <p class="faq-a">전주·익산·군산·정읍 등 전북 전 지역 출장이 가능한 편입니다. 정확한 일정은 사전 협의로 결정됩니다.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q"><span class="qmark">Q.</span> 견적은 사진만 보내도 가능한가요?</p>
+        <p class="faq-a">현장 사진 3장 정도면 1차 견적이 가능한 편입니다. 다만 현장 변수에 따라 조정될 수 있습니다.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q"><span class="qmark">Q.</span> 야간·주말 작업도 되나요?</p>
+        <p class="faq-a">사전 협의로 가능하며, 시간대에 따라 비용이 달라질 수 있습니다.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q"><span class="qmark">Q.</span> 협소 골목도 작업 가능한가요?</p>
+        <p class="faq-a">차량 종류에 따라 다르며, 사진으로 골목 폭과 회전 반경 확인이 필요한 편입니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s9">
+    <h2><span class="num">09</span>서비스 지역</h2>
+    <p>전북 인근 지역도 출장 상담 가능합니다.</p>
+    <div class="region-list">
+      <a href="/스카이차-비용/전주-스카이차-비용">전주</a>
+      <a href="#">익산</a>
+      <a href="#">군산</a>
+      <a href="#">정읍</a>
+      <a href="#">남원</a>
+      <a href="#">김제</a>
+      <a href="#">완주</a>
+    </div>
+  </section>
+
+</article>
+
+<footer>
+  <div class="f-inner">
+    <div>
+      <h4>연락</h4>
+      <p><a href="tel:01092490510">010-9249-0510</a></p>
+    </div>
+    <div>
+      <h4>안내</h4>
+      <p>현장 사진을 보내주시면 정확한 견적이 빠릅니다.<br>전북 전 지역 출장 가능.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- 사장님 컴펀용: sfskycar 대비 차별점 노트 (Hono로 옮길 때 제거됨) -->
+<aside class="diff">
+  <button class="close" onclick="this.parentElement.style.display='none'">×</button>
+  <h5><span class="tag">DIFF</span> sfskycar 대비 개선점</h5>
+  <ul>
+    <li>이미지가 "썸네일처럼" 편집됨 (그라데이션·뱃지·캡션 오버레이)</li>
+    <li>지역 뱃지(좌상)+카테고리 뱃지(우상)로 카드형 정체성</li>
+    <li>본문 사진은 번호 스탬프 + 캡션 오버레이 (sfskycar 단순 사진과 차별)</li>
+    <li>호버 시 이미지 살짝 확대 (모던 블로그 패턴)</li>
+    <li>전화 CTA가 이미지 아닌 tel: 버튼 + 카페 보조</li>
+    <li>모바일에서 헤더 sticky + 전화 버튼 항상 노출</li>
+    <li>FAQ Q. 라벨 빨강 강조</li>
+    <li>인근 시군구 칩 형태 내부링크</li>
+  </ul>
+</aside>
+
+</body>
+</html>

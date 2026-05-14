@@ -1,0 +1,70 @@
+name: Daily Publish
+
+# 하루 평균 16.5건 발행 (랜덤 변동 13~20건).
+# 20개 cron 트리거 × 발행 확률 0.825 (PUBLISH_PROBABILITY) = 13~20건/일.
+#
+# cron 시각은 UTC. KST = UTC + 9.
+# 자연스러운 패턴을 위해 모든 분 단위가 다름 (봇 탐지 회피).
+# 분포: KST 기준 08~24시 사이 빈도 높임 (정상 운영 시간대 흉내).
+
+on:
+  schedule:
+    - cron: "23 23 * * *"    # KST 08:23
+    - cron: "47 0 * * *"     # KST 09:47
+    - cron: "11 2 * * *"     # KST 11:11
+    - cron: "34 3 * * *"     # KST 12:34
+    - cron: "56 4 * * *"     # KST 13:56
+    - cron: "19 5 * * *"     # KST 14:19
+    - cron: "42 6 * * *"     # KST 15:42
+    - cron: "5 8 * * *"      # KST 17:05
+    - cron: "28 9 * * *"     # KST 18:28
+    - cron: "51 10 * * *"    # KST 19:51
+    - cron: "14 12 * * *"    # KST 21:14
+    - cron: "37 13 * * *"    # KST 22:37
+    - cron: "59 14 * * *"    # KST 23:59
+    - cron: "22 16 * * *"    # KST 01:22
+    - cron: "45 17 * * *"    # KST 02:45
+    - cron: "8 19 * * *"     # KST 04:08
+    - cron: "31 20 * * *"    # KST 05:31
+    - cron: "54 21 * * *"    # KST 06:54
+    - cron: "17 18 * * *"    # KST 03:17
+    - cron: "40 15 * * *"    # KST 00:40
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: "강제 발행 (확률 무시)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: content-pipeline/requirements.txt
+
+      - name: Install deps
+        run: pip install -r content-pipeline/requirements.txt
+
+      - name: Run publish cycle
+        env:
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+          WORKER_API_TOKEN:      ${{ secrets.WORKER_API_TOKEN }}
+          WORKER_API:            https://ajasky.co.kr/api/posts
+          SITE_DOMAIN:           ajasky.co.kr
+          PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '0.825' }}
+        run: python content-pipeline/run_once.py
