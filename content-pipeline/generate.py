@@ -43,19 +43,47 @@ def generate_post(region: str, board_title: str, longtail: str, model_name: str 
                     "top_p": 0.95,
                 },
             )
-            text = resp.text
+            text = _clean_json_text(resp.text)
             data = json.loads(text)
             _validate(data)
             return data
         except (json.JSONDecodeError, KeyError, ValueError) as e:
+            print(f"[attempt {attempt+1}/3] parse fail: {e}; raw head: {(resp.text or '')[:200]!r}", flush=True)
             if attempt == 2:
                 raise RuntimeError(f"Gemini parse failed after retries: {e}") from e
             time.sleep(2 ** attempt)
         except Exception as e:
+            print(f"[attempt {attempt+1}/3] exception: {e}", flush=True)
             if attempt == 2:
                 raise
             time.sleep(2 ** attempt)
     raise RuntimeError("unreachable")
+
+
+def _clean_json_text(text: str) -> str:
+    """Gemini가 가끔 ```json ... ``` 코드펜스나 leading text를 추가하는 경우 정리.
+
+    또한 body_md 안의 raw newline이 json.loads 깨먹는 경우를 위해 마지막 폴백으로
+    `{` ... `}` 구간만 추출.
+    """
+    if not text:
+        return text
+    t = text.strip()
+    # ```json … ``` 펜스 제거
+    if t.startswith("```"):
+        t = t.split("\n", 1)[1] if "\n" in t else t[3:]
+        if t.endswith("```"):
+            t = t[: -3]
+        t = t.strip()
+    # 한 번 더 leading "json" 등 흔적 제거
+    if t.lower().startswith("json"):
+        t = t[4:].lstrip(":\n ").strip()
+    # 첫 { … 마지막 } 만 추출 (앞뒤 잡설 제거)
+    first = t.find("{")
+    last = t.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        t = t[first : last + 1]
+    return t
 
 
 REQUIRED_FIELDS = ("title", "meta_description", "meta_keywords", "body_md", "faq")
