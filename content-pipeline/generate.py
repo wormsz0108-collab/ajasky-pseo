@@ -28,7 +28,7 @@ def _configure_gemini() -> None:
     genai.configure(api_key=key)
 
 
-def generate_post(region: str, board_title: str, longtail: str, model_name: str = "gemini-2.0-flash") -> dict[str, Any]:
+def generate_post(region: str, board_title: str, longtail: str, model_name: str = "gemini-2.5-flash") -> dict[str, Any]:
     _configure_gemini()
     prompt = _load_prompt(region, board_title, longtail)
     model = genai.GenerativeModel(model_name)
