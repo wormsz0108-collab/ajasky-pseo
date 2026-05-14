@@ -61,12 +61,23 @@ def pick_target():
 
 
 def build_og(slug: str, region: str, board_title: str) -> str:
-    """OG 이미지 합성 + R2 업로드. 실패 시 fallback URL.
+    """OG 이미지 URL 결정.
 
-    글 slug 결정적 → 같은 slug 재시도해도 같은 source photo.
+    우선순위:
+      1) R2 키가 있으면 → 사진 합성(텍스트 오버레이) → R2에 업로드 → 그 URL
+      2) R2 합성 실패해도 → pick_photo_key 결과 (Worker가 직접 R2에서 서빙)
+      3) 그것도 실패하면 → /media/hero.jpg 최후 fallback
+
+    글 slug 결정적 → 같은 slug 재시도해도 같은 사진.
     """
+    photo_key = pick_photo_key(slug)
+    fallback_url = f"/media/{photo_key}"   # Worker가 R2에서 직접 서빙 — R2 키 불필요
+
+    # R2 키 없거나 쓰기 권한 없으면 합성 스킵 — fallback URL로 충분
+    if not os.environ.get("R2_ACCESS_KEY_ID"):
+        return fallback_url
+
     try:
-        photo_key = pick_photo_key(slug)
         source_bytes = get_object(photo_key)
         ribbon, head_main = _split_board(board_title)
         composed = compose_og(
@@ -79,8 +90,8 @@ def build_og(slug: str, region: str, board_title: str) -> str:
         put_object(og_key, composed, "image/jpeg")
         return f"/media/{og_key}"
     except Exception as e:
-        print(f"[warn] OG compose failed, using fallback: {e}", file=sys.stderr)
-        return "/media/hero.jpg"
+        print(f"[warn] OG compose failed, using raw photo: {e}", file=sys.stderr)
+        return fallback_url
 
 
 def build_payload(region: str, region_type: str, board_slug: str, board_title: str, longtail: str, generated: dict) -> dict:
