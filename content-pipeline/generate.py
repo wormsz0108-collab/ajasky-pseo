@@ -2,6 +2,8 @@
 
 입력: region, board_title, longtail
 출력: dict with title, meta_description, meta_keywords, body_md, toc, faq
+
+JSON 깨짐 방지: response_schema 강제 + 다단계 복구.
 """
 from __future__ import annotations
 
@@ -14,6 +16,36 @@ from typing import Any
 import google.generativeai as genai
 
 PROMPT_TEMPLATE_PATH = Path(__file__).parent / "prompt-template.txt"
+
+# Gemini에 강제할 응답 스키마 (response_schema 사용 시 SDK가 엄격 강제)
+RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string"},
+        "meta_description": {"type": "string"},
+        "meta_keywords": {"type": "string"},
+        "body_md": {"type": "string"},
+        "toc": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "level": {"type": "integer"},
+                    "title": {"type": "string"},
+                },
+            },
+        },
+        "faq": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"q": {"type": "string"}, "a": {"type": "string"}},
+                "required": ["q", "a"],
+            },
+        },
+    },
+    "required": ["title", "meta_description", "meta_keywords", "body_md", "faq"],
+}
 
 
 def _load_prompt(region: str, board_title: str, longtail: str) -> str:
@@ -28,72 +60,125 @@ def _configure_gemini() -> None:
     genai.configure(api_key=key)
 
 
+def _safe_resp_text(resp) -> str:
+    """resp.text 가 safety block 등으로 raise할 때 대비. parts에서 직접 모음."""
+    try:
+        return resp.text or ""
+    except Exception:
+        pass
+    try:
+        parts = []
+        for cand in (resp.candidates or []):
+            content = getattr(cand, "content", None)
+            for p in (getattr(content, "parts", None) or []):
+                t = getattr(p, "text", None)
+                if t:
+                    parts.append(t)
+        return "".join(parts)
+    except Exception:
+        return ""
+
+
 def generate_post(region: str, board_title: str, longtail: str, model_name: str = "gemini-2.5-flash") -> dict[str, Any]:
     _configure_gemini()
     prompt = _load_prompt(region, board_title, longtail)
     model = genai.GenerativeModel(model_name)
 
     for attempt in range(3):
+        raw_text = ""
         try:
             resp = model.generate_content(
                 prompt,
                 generation_config={
                     "response_mime_type": "application/json",
+                    "response_schema": RESPONSE_SCHEMA,
                     "temperature": 0.9,
                     "top_p": 0.95,
                 },
             )
-            text = _clean_json_text(resp.text)
-            data = _parse_json_lenient(text)
+            raw_text = _safe_resp_text(resp)
+            # 항상 응답 head 로깅 (디버깅용)
+            print(f"[attempt {attempt+1}/3] resp len={len(raw_text)} head={raw_text[:160]!r}", flush=True)
+            if not raw_text:
+                raise ValueError("empty response (possibly safety blocked)")
+
+            cleaned = _clean_json_text(raw_text)
+            data = _parse_json_lenient(cleaned)
             _validate(data)
             return data
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            print(f"[attempt {attempt+1}/3] parse fail: {e}; raw head: {(resp.text or '')[:200]!r}", flush=True)
-            if attempt == 2:
-                raise RuntimeError(f"Gemini parse failed after retries: {e}") from e
-            time.sleep(2 ** attempt)
         except Exception as e:
-            print(f"[attempt {attempt+1}/3] exception: {e}", flush=True)
+            print(f"[attempt {attempt+1}/3] FAIL: {type(e).__name__}: {e}", flush=True)
             if attempt == 2:
-                raise
+                raise RuntimeError(f"Gemini failed after 3 attempts: {type(e).__name__}: {e}") from e
             time.sleep(2 ** attempt)
     raise RuntimeError("unreachable")
 
 
 def _parse_json_lenient(text: str) -> dict[str, Any]:
-    """엄격 파싱 실패 시 json-repair 로 복구. Gemini가 가끔 body_md 안에 raw \\n을 넣어 깨먹음."""
+    """다단계 복구.
+
+    1. json.loads (정상)
+    2. json_repair.repair_json (return_objects=True)
+    3. body_md 부분만 따로 추출 + 나머지 정리해서 합치기 (최후 수단)
+    """
+    if not text:
+        raise json.JSONDecodeError("empty text", text, 0)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        try:
-            from json_repair import repair_json
-        except ImportError as e:
-            raise json.JSONDecodeError(f"strict parse failed and json-repair missing: {e}", text, 0)
+        pass
+
+    try:
+        from json_repair import repair_json
         repaired = repair_json(text, return_objects=True)
-        if not isinstance(repaired, dict):
-            raise json.JSONDecodeError("repair did not yield object", text, 0)
-        return repaired
+        if isinstance(repaired, dict) and repaired:
+            return repaired
+    except ImportError:
+        print("[warn] json-repair not installed", flush=True)
+    except Exception as e:
+        print(f"[warn] json-repair raised: {e}", flush=True)
+
+    # 최후 수단: 정규식으로 핵심 필드 추출
+    import re
+    out: dict[str, Any] = {}
+    for key in ("title", "meta_description", "meta_keywords"):
+        m = re.search(rf'"{key}"\s*:\s*"([^"]*)"', text)
+        if m:
+            out[key] = m.group(1)
+    # body_md: "body_md": "..." 형태 (이스케이프 무시)
+    body_match = re.search(r'"body_md"\s*:\s*"(.*?)"\s*,\s*"(?:toc|faq)"', text, re.DOTALL)
+    if body_match:
+        out["body_md"] = body_match.group(1).replace('\\n', '\n').replace('\\"', '"')
+    # faq 추출 시도
+    faq_match = re.search(r'"faq"\s*:\s*(\[.*?\])\s*}', text, re.DOTALL)
+    if faq_match:
+        try:
+            out["faq"] = json.loads(faq_match.group(1))
+        except Exception:
+            try:
+                from json_repair import repair_json
+                rf = repair_json(faq_match.group(1), return_objects=True)
+                if isinstance(rf, list):
+                    out["faq"] = rf
+            except Exception:
+                pass
+    if out:
+        return out
+    raise json.JSONDecodeError("all parse strategies failed", text, 0)
 
 
 def _clean_json_text(text: str) -> str:
-    """Gemini가 가끔 ```json ... ``` 코드펜스나 leading text를 추가하는 경우 정리.
-
-    또한 body_md 안의 raw newline이 json.loads 깨먹는 경우를 위해 마지막 폴백으로
-    `{` ... `}` 구간만 추출.
-    """
+    """Gemini가 코드펜스나 leading 텍스트를 추가하는 경우 정리."""
     if not text:
         return text
     t = text.strip()
-    # ```json … ``` 펜스 제거
     if t.startswith("```"):
         t = t.split("\n", 1)[1] if "\n" in t else t[3:]
         if t.endswith("```"):
             t = t[: -3]
         t = t.strip()
-    # 한 번 더 leading "json" 등 흔적 제거
     if t.lower().startswith("json"):
         t = t[4:].lstrip(":\n ").strip()
-    # 첫 { … 마지막 } 만 추출 (앞뒤 잡설 제거)
     first = t.find("{")
     last = t.rfind("}")
     if first != -1 and last != -1 and last > first:
@@ -105,12 +190,13 @@ REQUIRED_FIELDS = ("title", "meta_description", "meta_keywords", "body_md", "faq
 
 
 def _validate(d: dict[str, Any]) -> None:
+    if not isinstance(d, dict):
+        raise ValueError(f"not a dict, got {type(d).__name__}")
     for k in REQUIRED_FIELDS:
         if k not in d or not d[k]:
             raise ValueError(f"missing field: {k}")
     if len(d["title"]) > 400:
         raise ValueError("title too long")
-    # 네이버 SA 권장: meta description 80자 이내. 살짝 여유는 두지만 90 넘으면 재시도.
     if len(d["meta_description"]) > 90:
         raise ValueError(f"meta_description too long ({len(d['meta_description'])}자, 네이버 80자 권장)")
     if len(d["body_md"]) > 200_000:
@@ -120,7 +206,6 @@ def _validate(d: dict[str, Any]) -> None:
 
 
 if __name__ == "__main__":
-    # 단독 실행 시 샘플 1건 생성하고 출력 (디버그용)
     import sys
     if len(sys.argv) < 4:
         print("usage: python generate.py <region> <board_title> <longtail>")
