@@ -50,14 +50,15 @@ TITLE_FORMATS = [
 
 
 # 길이/항목 변동 (네이버는 정확히 동일한 길이의 글을 의심)
+# 경쟁사 분석: 8,000~9,000자 / 9 h2 ≈ 900자/h2. 우리도 매칭해야 D.I.A. 정보량 시그널 확보.
 def pick_body_target_chars() -> tuple[int, int]:
     """h2 본문 1개당 목표 길이 (min, max). 매 글 변동."""
-    bases = [(220, 320), (260, 380), (300, 440), (240, 360), (280, 420)]
+    bases = [(600, 850), (700, 950), (650, 900), (550, 800), (750, 1000)]
     return random.choice(bases)
 
 
 def pick_list_count() -> int:
-    return random.choice([4, 5, 5, 6, 6, 7])
+    return random.choice([5, 5, 6, 6, 7, 7, 8])
 
 
 def pick_shape() -> str:

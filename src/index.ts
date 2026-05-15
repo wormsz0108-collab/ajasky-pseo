@@ -11,6 +11,7 @@ import { renderRobots } from './seo/robots';
 import { renderRss } from './seo/rss';
 import { buildThumbnailText } from './lib/thumbnail-text';
 import { parseBodyMarkdown } from './lib/markdown';
+import { pickBodyPhotos } from './lib/body-photos';
 import { NotFoundPage } from './templates/notfound';
 import apiRoutes from './routes/api';
 import { nearbyRegions } from './lib/regions';
@@ -220,12 +221,17 @@ function renderPost(opts: {
     href: `/${encodeURIComponent(board.slug)}`,
   }));
 
+  const bodyPhotos = pickBodyPhotos(post.slug, post.region, board.title);
+  const relatedBoards = boards.filter(b => b.slug !== board.slug);
+
   return new Response(
     PostPage({
       site, boards, board, post,
       sections, faq,
       thumbnailText: buildThumbnailText(post.region, board.title),
       regionChips,
+      bodyPhotos,
+      relatedBoards,
       jsonLd,
     }).toString(),
     { headers: { 'content-type': 'text/html; charset=utf-8' } }

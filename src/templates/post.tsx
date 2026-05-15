@@ -26,13 +26,15 @@ interface PostPageProps {
   faq: RenderedFaq[];
   thumbnailText: ThumbnailText;
   regionChips: { name: string; href: string }[];
+  bodyPhotos: { url: string; caption: string }[];   // 본문 중간 삽입 사진 (slug 해시 결정적)
+  relatedBoards: { slug: string; title: string }[]; // 다른 보드 cross-link
   jsonLd: object;
 }
 
 export function PostPage(props: PostPageProps) {
   const {
     site, boards, post, board, sections, faq,
-    thumbnailText, regionChips, jsonLd,
+    thumbnailText, regionChips, bodyPhotos, relatedBoards, jsonLd,
   } = props;
 
   const phoneHref = `tel:${site.phone.replace(/-/g, '')}`;
@@ -89,6 +91,12 @@ export function PostPage(props: PostPageProps) {
         <section id="${s.anchor}">
           <h2><span class="num">${s.num}</span>${s.title}</h2>
           ${raw(s.bodyHtml)}
+          ${(i === 1 || i === 3 || i === 5) && bodyPhotos[Math.floor(i / 2)] ? html`
+            <figure class="figure">
+              <img src="${bodyPhotos[Math.floor(i / 2)].url}" alt="${bodyPhotos[Math.floor(i / 2)].caption}" loading="lazy">
+              <figcaption>${bodyPhotos[Math.floor(i / 2)].caption}</figcaption>
+            </figure>
+          ` : ''}
         </section>
       `)}
 
@@ -110,6 +118,16 @@ export function PostPage(props: PostPageProps) {
           <p>${post.region} 인근 지역도 출장 상담 가능합니다.</p>
           <div class="region-list">
             ${regionChips.map(c => html`<a href="${c.href}">${c.name}</a>`)}
+          </div>
+        </section>
+      ` : ''}
+
+      ${relatedBoards.length > 0 ? html`
+        <section id="related">
+          <h2><span class="num">${pad(sections.length + 3)}</span>다른 안내 둘러보기</h2>
+          <p>다른 분야 안내도 함께 살펴보세요.</p>
+          <div class="region-list">
+            ${relatedBoards.map(b => html`<a href="/${encodeURIComponent(b.slug)}">${b.title}</a>`)}
           </div>
         </section>
       ` : ''}

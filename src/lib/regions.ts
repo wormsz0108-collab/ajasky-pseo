@@ -26,9 +26,17 @@ export const REGION_NEIGHBORS: Record<string, string[]> = {
   '세종특별자치시': ['세종시'],
 };
 
-// 최대 7개 칩 반환. 글 region 인근 시군구.
-export function nearbyRegions(region: string, max = 7): string[] {
-  const list = REGION_NEIGHBORS[region];
+// 글 region 인근 시군구 전체 반환 (max 미지정 시 전부).
+// 경쟁사 100개+ 내부 링크 대비 → 광역의 전 시군구 노출이 D.I.A. 내부 링크 시그널에 유리.
+// region 이 "경기" 같은 광역이면 산하 전부, "경기 수원시" 같은 시군구면 같은 광역 산하 전부 반환.
+export function nearbyRegions(region: string, max = 50): string[] {
+  // 우선 정확히 매칭
+  let list = REGION_NEIGHBORS[region];
+  if (!list) {
+    // "경기 수원시" → 광역 "경기" 부모 추출
+    const parent = region.split(/\s+/)[0];
+    list = REGION_NEIGHBORS[parent];
+  }
   if (!list || list.length === 0) return [];
   return list.slice(0, max);
 }
