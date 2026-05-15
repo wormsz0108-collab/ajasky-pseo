@@ -7,34 +7,31 @@ export interface ThumbnailText {
   headlineHighlight: string; // 큰 글자 둘째 줄, 노랑 밑줄 (예: "스카이차")
 }
 
+// 보드별 명시적 매핑 — 리본에는 항상 카테고리(보드 차별자)가 들어감. 지역명 fallback 금지.
+const BOARD_THUMBNAIL_MAP: Record<string, { ribbon: string; main: string }> = {
+  '스카이차':      { ribbon: '스카이차', main: '스카이차' },
+  '스카이차 일대':  { ribbon: '일대',    main: '스카이차' },
+  '스카이 작업차':  { ribbon: '작업차',  main: '스카이' },
+  '스카이차 요금':  { ribbon: '요금',    main: '스카이차' },
+  '스카이차 비용':  { ribbon: '비용',    main: '스카이차' },
+  '스카이차 가격':  { ribbon: '가격',    main: '스카이차' },
+  '스카이차 이용료': { ribbon: '이용료',  main: '스카이차' },
+  '고소작업차량':   { ribbon: '차량',    main: '고소작업' },
+};
+
 export function buildThumbnailText(region: string, boardTitle: string): ThumbnailText {
-  const parts = boardTitle.split(/\s+/);
-
-  // 2단어 보드 (스카이차 비용, 스카이차 일대, 스카이 작업차 …)
-  // → 둘째 단어를 리본, 첫째 단어를 강조
-  if (parts.length === 2) {
+  const mapped = BOARD_THUMBNAIL_MAP[boardTitle];
+  if (mapped) {
     return {
-      ribbon: parts[1],
+      ribbon: mapped.ribbon,
       headlinePrefix: region,
-      headlineHighlight: parts[0],
+      headlineHighlight: mapped.main,
     };
   }
-
-  // 1단어 보드라도 접미사로 자연 분리 가능 (고소작업차량 → 고소작업 + 차량)
-  // 좁은 카드에서 한 단어가 길면 노란 밑줄이 거대한 박스로 변하므로 시각적으로도 필수
-  const suffixMatch = boardTitle.match(/^(.+?)(차량|작업차|이용료|작업)$/);
-  if (suffixMatch && suffixMatch[1].length >= 2) {
-    return {
-      ribbon: suffixMatch[2],
-      headlinePrefix: region,
-      headlineHighlight: suffixMatch[1],
-    };
-  }
-
-  // 그 외 1단어 보드 (스카이차) — 차별자 없음 → 지역을 리본으로 fallback
+  // 알 수 없는 보드면 안전 fallback (지역명 절대 리본에 들어가지 않게)
   return {
-    ribbon: region,
-    headlinePrefix: '',
+    ribbon: boardTitle,
+    headlinePrefix: region,
     headlineHighlight: boardTitle,
   };
 }

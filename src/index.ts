@@ -46,7 +46,7 @@ app.get('/_health', (c) => c.json({ ok: true, ts: Date.now() }));
 app.route('/api', apiRoutes);
 
 // ----- SEO endpoints -----
-const xmlHeaders = { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' };
+const xmlHeaders = { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=300, s-maxage=60' };
 
 app.get('/sitemap.xml', async (c) => {
   const xml = await renderSitemapIndex(c.env, c.get('site'));

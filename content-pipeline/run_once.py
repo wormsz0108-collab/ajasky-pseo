@@ -27,15 +27,18 @@ from regions import all_region_targets
 
 
 def _split_board(board_title: str) -> tuple[str, str]:
-    """보드 → (ribbon, headline_main). thumbnail-text.ts 와 동일 로직."""
-    parts = board_title.split()
-    if len(parts) == 2:
-        return parts[1], parts[0]
-    # 접미사 분리
-    for suffix in ("차량", "작업차", "이용료", "작업"):
-        if board_title.endswith(suffix) and len(board_title) - len(suffix) >= 2:
-            return suffix, board_title[: -len(suffix)]
-    return "", board_title
+    """보드 → (ribbon, headline_main). thumbnail-text.ts BOARD_THUMBNAIL_MAP 과 동일."""
+    BOARD_MAP = {
+        "스카이차":      ("스카이차", "스카이차"),
+        "스카이차 일대":  ("일대",    "스카이차"),
+        "스카이 작업차":  ("작업차",  "스카이"),
+        "스카이차 요금":  ("요금",    "스카이차"),
+        "스카이차 비용":  ("비용",    "스카이차"),
+        "스카이차 가격":  ("가격",    "스카이차"),
+        "스카이차 이용료": ("이용료",  "스카이차"),
+        "고소작업차량":   ("차량",    "고소작업"),
+    }
+    return BOARD_MAP.get(board_title, (board_title, board_title))
 
 
 SITE_DOMAIN = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
@@ -82,9 +85,9 @@ def build_og(slug: str, region: str, board_title: str) -> str:
         ribbon, head_main = _split_board(board_title)
         composed = compose_og(
             source_bytes,
-            ribbon=ribbon or region,
-            headline_prefix=region if ribbon else "",
-            headline_main=head_main,
+            ribbon=ribbon,             # 항상 보드 카테고리. 지역명 fallback 금지.
+            headline_prefix=region,    # 큰 글자 1줄 = 지역
+            headline_main=head_main,   # 큰 글자 2줄 = 메인 키워드
         )
         og_key = f"og/{slug}.jpg"
         put_object(og_key, composed, "image/jpeg")
