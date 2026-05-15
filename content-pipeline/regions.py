@@ -62,14 +62,23 @@ def all_region_targets():
     사장님 실 서비스 권역 한정 (2026-05-14):
       광역 전체:  서울, 경기, 인천, 세종, 대전, 충남
       충북 일부:  청주, 충주 만
+
+    3단계 레벨 모두 포함:
+      광역    (서울, 경기, ...)             ← 6개
+      시군구  (서울 강남구, 경기 수원시 ...)  ← ~90개
+      법정동  (서울 강남구 청담동 ...)         ← ~1,400개 (PDF 추출 자동)
     """
     INCLUDE_FULL_REGIONS = {"서울", "경기", "인천", "세종", "대전", "충남"}
     INCLUDE_CHUNGBUK_CITIES = {"청주시", "충주시"}
 
     out = []
+
+    # 1) 광역
     for r in REGIONS_BY_LEVEL["광역"]:
         if r in INCLUDE_FULL_REGIONS:
             out.append((r, "광역"))
+
+    # 2) 시군구
     for parent, children in REGIONS_BY_LEVEL["시군구"].items():
         if parent in INCLUDE_FULL_REGIONS:
             for c in children:
@@ -78,4 +87,16 @@ def all_region_targets():
             for c in children:
                 if c in INCLUDE_CHUNGBUK_CITIES:
                     out.append((f"{parent} {c}", "시군구"))
+
+    # 3) 법정동 (PDF 추출, region_dongs.py)
+    try:
+        from region_dongs import REGION_DONGS
+        for parent_label, cities in REGION_DONGS.items():
+            for city, dongs in cities.items():
+                for dong in dongs:
+                    # 예: "서울 강남구 청담동"
+                    out.append((f"{parent_label} {city} {dong}", "법정동"))
+    except ImportError:
+        pass  # PDF 추출 안 됐을 때 안전 fallback
+
     return out

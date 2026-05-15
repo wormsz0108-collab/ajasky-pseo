@@ -40,7 +40,10 @@ export function buildUrlSet(entries: UrlEntry[]): string {
     return `  <url>\n    ${parts.join('\n    ')}\n  </url>`;
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap-0.9">
+<urlset
+    xmlns="http://www.sitemaps.org/schemas/sitemap-0.9"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap-0.9 http://www.sitemaps.org/schemas/sitemap-0.9/sitemap.xsd">
 ${items}
 </urlset>`;
 }
@@ -52,7 +55,10 @@ export function buildSitemapIndex(maps: { loc: string; lastmod?: string }[]): st
     return `  <sitemap>\n    ${parts.join('\n    ')}\n  </sitemap>`;
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap-0.9">
+<sitemapindex
+    xmlns="http://www.sitemaps.org/schemas/sitemap-0.9"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap-0.9 http://www.sitemaps.org/schemas/siteindex.xsd">
 ${items}
 </sitemapindex>`;
 }
