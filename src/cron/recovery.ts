@@ -30,7 +30,7 @@ export async function recoveryCron(env: Env): Promise<void> {
   }
 
   // GHA에 이미 실행 중/대기 중 run 있으면 dispatch 안 함 (중복 방지)
-  const activeRuns = await countActiveRuns();
+  const activeRuns = await countActiveRuns(env);
   if (activeRuns > 0) {
     console.log(`[recovery] ${activeRuns} active run(s), skip`);
     return;
@@ -40,7 +40,8 @@ export async function recoveryCron(env: Env): Promise<void> {
   await dispatchWorkflow(env, batchSize);
 }
 
-async function countActiveRuns(): Promise<number> {
+async function countActiveRuns(env: Env): Promise<number> {
+  // GitHub IP rate limit 회피 위해 인증 헤더 포함 (Actions read 권한)
   const statuses = ['in_progress', 'queued'];
   let total = 0;
   for (const status of statuses) {
@@ -48,14 +49,17 @@ async function countActiveRuns(): Promise<number> {
       `https://api.github.com/repos/${REPO}/actions/workflows/publish.yml/runs?per_page=5&status=${status}`,
       {
         headers: {
+          'Authorization': `Bearer ${env.GITHUB_DISPATCH_TOKEN}`,
           'User-Agent': 'ajasky-recovery',
           'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
         },
       }
     );
     if (!resp.ok) {
       console.error(`[recovery] runs API (${status}) failed: ${resp.status}`);
-      return 999;  // 실패 시 보수적으로 dispatch 막음
+      // 401/403이면 dispatch도 어차피 실패할 테니 막고, 5xx면 일단 시도 허용
+      return resp.status >= 500 ? 0 : 999;
     }
     const data = await resp.json() as { workflow_runs: unknown[] };
     total += data.workflow_runs.length;
