@@ -193,27 +193,20 @@ app.get('/:boardSlug/:postSlug', async (c) => {
   ).bind(site.id, board.id, postSlug).all<{ slug: string; title: string; region: string }>();
   const sameBoardPosts = sameBoardRows.results;
 
-  if (post) {
-    // body_md 마크다운 파서 → 9-섹션 추출. 파싱 실패 시 dummy fallback.
-    let sections = parseBodyMarkdown(post.body_md);
-    if (sections.length < 3) {
-      sections = buildDummySections(post.region, board.title);
-    }
-    return renderPost({
-      site, boards, board, post,
-      sections,
-      faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
-      sameBoardPosts,
-    });
+  if (!post) {
+    // DB에 없는 slug = 404. 시안용 dummy fallback 제거 (publish 파이프라인의 사전 체크가 이걸 의존).
+    return c.notFound();
   }
 
-  // Phase 2 데모: DB에 글이 없어도 더미 시안 렌더
-  const dummyPost = buildDummyPost('전북', board.title, postSlug);
+  // body_md 마크다운 파서 → 9-섹션 추출. 파싱 실패 시 dummy fallback.
+  let sections = parseBodyMarkdown(post.body_md);
+  if (sections.length < 3) {
+    sections = buildDummySections(post.region, board.title);
+  }
   return renderPost({
-    site, boards, board,
-    post: { ...dummyPost, slug: postSlug } as any,
-    sections: buildDummySections('전북', board.title),
-    faq: buildDummyFaq('전북', board.title),
+    site, boards, board, post,
+    sections,
+    faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
     sameBoardPosts,
   });
 });
