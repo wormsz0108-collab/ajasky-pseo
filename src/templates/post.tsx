@@ -92,7 +92,16 @@ export function PostPage(props: PostPageProps) {
         <section id="${s.anchor}">
           <h2><span class="num">${s.num}</span>${s.title}</h2>
           ${raw(s.bodyHtml)}
-          ${(i === 1 || i === 3 || i === 5) && bodyPhotos[Math.floor(i / 2)] ? html`
+          ${i === 1 ? Thumbnail({
+            imageUrl: post.og_image_url || '/media/default-hero.jpg',
+            ribbon: thumbnailText.ribbon,
+            headlinePrefix: thumbnailText.headlinePrefix,
+            headlineHighlight: thumbnailText.headlineHighlight,
+            brandName: site.site_name,
+            phone: site.phone,
+            alt: `${post.region} ${board.title} 대표 이미지`,
+          }) : ''}
+          ${(i === 3 || i === 5) && bodyPhotos[Math.floor(i / 2)] ? html`
             <figure class="figure">
               <img src="${bodyPhotos[Math.floor(i / 2)].url}" alt="${bodyPhotos[Math.floor(i / 2)].caption}" loading="lazy">
               <figcaption>${bodyPhotos[Math.floor(i / 2)].caption}</figcaption>
