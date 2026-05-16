@@ -48,10 +48,13 @@ def _auth() -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def list_missing(offset: int, limit: int) -> list[dict]:
+def list_missing(offset: int, limit: int, all_posts: bool = False) -> list[dict]:
+    params: dict = {"limit": limit, "offset": offset}
+    if not all_posts:
+        params["missing_og"] = "1"
     r = requests.get(
         f"{BASE}/api/posts/list",
-        params={"missing_og": "1", "limit": limit, "offset": offset},
+        params=params,
         headers=_auth(),
         timeout=30,
     )
@@ -82,8 +85,15 @@ def backfill_one(post: dict) -> bool:
     board_title = post["board_title"]
     photo_url = post["og_image_url"]
 
-    if not photo_url or not photo_url.startswith("/media/"):
-        print(f"  [skip] id={pid}: no photo url ({photo_url!r})")
+    # 이미 composed JPG 가리키면 원본 photo 키로 fallback (slug 결정적 hash).
+    # 그래야 재합성 시 동일 photo 가져와 새 폰트 규칙으로 다시 그림.
+    if not photo_url or photo_url.startswith("/media/og/"):
+        from image_pool import pick_photo_key
+        photo_key = pick_photo_key(slug)
+        photo_url = f"/media/{photo_key}"
+
+    if not photo_url.startswith("/media/"):
+        print(f"  [skip] id={pid}: bad photo url ({photo_url!r})")
         return False
 
     try:
@@ -130,13 +140,15 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="max total posts to process")
     ap.add_argument("--page-size", type=int, default=20, help="per-page list size")
     ap.add_argument("--sleep", type=float, default=0.5, help="seconds between posts")
+    ap.add_argument("--all", action="store_true",
+                    help="이미 composed 인 글도 재합성 (compose_og 규칙이 바뀌었을 때)")
     args = ap.parse_args()
 
     processed = 0
     success = 0
     offset = 0
     while True:
-        page = list_missing(offset=offset, limit=args.page_size)
+        page = list_missing(offset=offset, limit=args.page_size, all_posts=args.all)
         if not page:
             break
         print(f"[page] offset={offset} got {len(page)} posts")
@@ -149,8 +161,10 @@ def main():
             time.sleep(args.sleep)
         if args.limit is not None and processed >= args.limit:
             break
-        # 모든 페이지 처리 후 offset은 0 유지 — patch 후 그 글들이 missing_og=1 결과에서 빠지므로
-        # 다음 호출에 자동으로 새 페이지가 잡힘. offset 증가는 같은 글 반복 회피용 보조.
+        # missing_og=1 모드: patch 후 결과에서 빠져 offset 0 유지로 새 페이지 자동 잡힘.
+        # --all 모드: offset 증가시켜야 순차 진행.
+        if args.all:
+            offset += len(page)
         if len(page) < args.page_size:
             break
 

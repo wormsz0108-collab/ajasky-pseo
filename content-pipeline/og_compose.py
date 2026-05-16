@@ -55,6 +55,18 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
+def _fit_font(text: str, max_w: int, start_size: int, min_size: int = 40) -> ImageFont.FreeTypeFont:
+    """text 가 max_w 안에 들어가도록 폰트 크기 축소. start_size 부터 min_size 까지."""
+    size = start_size
+    while size > min_size:
+        font = _find_font(size)
+        bbox = font.getbbox(text)
+        if (bbox[2] - bbox[0]) <= max_w:
+            return font
+        size -= 8
+    return _find_font(min_size)
+
+
 def _stroke_text(draw: ImageDraw.ImageDraw, xy, text, font, fill, stroke_fill, stroke_width):
     draw.text(xy, text, font=font, fill=fill, stroke_width=stroke_width, stroke_fill=stroke_fill)
 
@@ -106,14 +118,19 @@ def compose_og(
         draw.text((rx - bbox[0], ry - bbox[1]), ribbon, font=rfont, fill=COLOR_WHITE)
 
     # 4. 메인 헤드라인 (좌측 띠 옆 + 위에서 30% 부근)
-    hfont = _find_font(HEAD_LINE_FONT_PX)
+    # 좌측 노란 띠(SIDE_WIDTH)와 우측 8% 여백을 빼고 사용 가능 폭 계산.
     head_x = int(OUT_W * 0.10)
+    avail_w = OUT_W - head_x - int(OUT_W * 0.04)
     head_y = int(OUT_H * 0.30)
+    # prefix(지역명) — 폭 맞춰 자동 축소.
     if headline_prefix:
-        _stroke_text(draw, (head_x, head_y), headline_prefix, hfont, COLOR_WHITE, COLOR_BLACK, 6)
-        head_y += int(HEAD_LINE_FONT_PX * 1.05)
-    # main에 노란 밑줄 박스 효과 (60% 위치부터 노란 배경)
-    bbox = draw.textbbox((0, 0), headline_main, font=hfont)
+        pfont = _fit_font(headline_prefix, avail_w, HEAD_LINE_FONT_PX)
+        _stroke_text(draw, (head_x, head_y), headline_prefix, pfont, COLOR_WHITE, COLOR_BLACK, 6)
+        pbbox = pfont.getbbox(headline_prefix)
+        head_y += int((pbbox[3] - pbbox[1]) * 1.20)
+    # main(메인 키워드) — 폭 맞춰 자동 축소 + 노란 밑줄.
+    mfont = _fit_font(headline_main, avail_w, HEAD_LINE_FONT_PX)
+    bbox = draw.textbbox((0, 0), headline_main, font=mfont)
     mh = bbox[3] - bbox[1]
     mw = bbox[2] - bbox[0]
     underline_y = head_y + int(mh * 0.6) - bbox[1]
@@ -122,7 +139,7 @@ def compose_og(
         [head_x - bbox[0] - 4, underline_y, head_x - bbox[0] + mw + 8, underline_y + underline_h],
         fill=COLOR_YELLOW,
     )
-    _stroke_text(draw, (head_x, head_y), headline_main, hfont, COLOR_WHITE, COLOR_BLACK, 6)
+    _stroke_text(draw, (head_x, head_y), headline_main, mfont, COLOR_WHITE, COLOR_BLACK, 6)
 
     # 5. 하단 검정 바 (사선 컷 흉내 — 간단히 직사각 + 위쪽 사선)
     bar_top = OUT_H - BAR_HEIGHT
