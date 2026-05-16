@@ -185,6 +185,14 @@ app.get('/:boardSlug/:postSlug', async (c) => {
     `SELECT * FROM posts WHERE site_id = ? AND board_id = ? AND slug = ? AND status = 'published'`
   ).bind(site.id, board.id, postSlug).first<Post>();
 
+  // 같은 보드 다른 글 (클러스터 시그널) — 7개 랜덤. 현재 글 제외.
+  const sameBoardRows = await c.env.DB.prepare(
+    `SELECT slug, title, region FROM posts
+     WHERE site_id = ? AND board_id = ? AND status = 'published' AND slug != ?
+     ORDER BY RANDOM() LIMIT 7`
+  ).bind(site.id, board.id, postSlug).all<{ slug: string; title: string; region: string }>();
+  const sameBoardPosts = sameBoardRows.results;
+
   if (post) {
     // body_md 마크다운 파서 → 9-섹션 추출. 파싱 실패 시 dummy fallback.
     let sections = parseBodyMarkdown(post.body_md);
@@ -195,6 +203,7 @@ app.get('/:boardSlug/:postSlug', async (c) => {
       site, boards, board, post,
       sections,
       faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
+      sameBoardPosts,
     });
   }
 
@@ -205,6 +214,7 @@ app.get('/:boardSlug/:postSlug', async (c) => {
     post: { ...dummyPost, slug: postSlug } as any,
     sections: buildDummySections('전북', board.title),
     faq: buildDummyFaq('전북', board.title),
+    sameBoardPosts,
   });
 });
 
@@ -212,8 +222,9 @@ function renderPost(opts: {
   site: Site; boards: Pick<Board, 'slug'|'title'>[]; board: Board;
   post: Post; sections: ReturnType<typeof buildDummySections>;
   faq: { q: string; a: string }[];
+  sameBoardPosts: { slug: string; title: string; region: string }[];
 }) {
-  const { site, boards, board, post, sections, faq } = opts;
+  const { site, boards, board, post, sections, faq, sameBoardPosts } = opts;
   const jsonLd = buildArticleJsonLd({ site, board, post, faq });
 
   const regionChips = nearbyRegions(post.region).map(name => ({
@@ -232,6 +243,7 @@ function renderPost(opts: {
       regionChips,
       bodyPhotos,
       relatedBoards,
+      sameBoardPosts,
       jsonLd,
     }).toString(),
     { headers: { 'content-type': 'text/html; charset=utf-8' } }

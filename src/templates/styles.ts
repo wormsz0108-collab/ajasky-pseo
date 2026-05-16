@@ -95,6 +95,14 @@ section li{margin:4px 0}
 .faq-q .qmark{color:var(--accent);font-weight:800}
 .faq-a{color:var(--text-soft);margin:0;padding-left:24px}
 
+/* same-board related posts list */
+.related-list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.related-list li{margin:0}
+.related-list a{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;text-decoration:none;background:#fff;transition:border-color .2s,transform .2s}
+.related-list a:hover{border-color:var(--accent);transform:translateX(2px)}
+.related-region{font-size:12px;color:#fff;background:var(--accent);padding:3px 8px;border-radius:6px;font-weight:600;flex-shrink:0;white-space:nowrap}
+.related-title{font-size:14px;color:var(--text);font-weight:500;line-height:1.4}
+
 /* region chips */
 .region-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .region-list a{text-decoration:none;background:var(--bg-soft);border:1px solid var(--line);padding:6px 12px;border-radius:8px;font-size:13px;color:var(--text-soft)}
