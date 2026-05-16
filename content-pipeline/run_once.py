@@ -119,27 +119,58 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
     }
 
 
-def publish_one(idx: int = 0) -> bool:
-    """1건 발행 시도. 성공/중복 = True, 에러 = False."""
-    region, region_type, board_slug, board_title, longtail = pick_target()
-    print(f"[#{idx}] target region={region!r} board={board_title!r}")
-    try:
-        generated = generate_post(region, board_title, longtail)
-    except Exception as e:
-        print(f"[#{idx}] generate failed: {e}", file=sys.stderr)
-        return False
-    payload = build_payload(region, region_type, board_slug, board_title, longtail, generated)
-    print(f"[#{idx}] slug={payload['slug']!r}")
-    try:
-        result = publish(payload)
-    except Exception as e:
-        print(f"[#{idx}] publish failed: {e}", file=sys.stderr)
-        return False
-    if result is None:
-        print(f"[#{idx}] duplicate skipped")
-    else:
+def publish_one(idx: int = 0, max_retries: int = 5) -> bool:
+    """1건 실제 발행될 때까지 최대 N회 재시도.
+
+    중복(409) 발생 시 다른 (region, board, longtail) 조합으로 재시도.
+    Gemini 생성 전에 slug 만 먼저 만들어 DB에 있는지 확인 → 있으면 Gemini 호출 자체 스킵해 비용 절약.
+    """
+    for attempt in range(max_retries):
+        region, region_type, board_slug, board_title, longtail = pick_target()
+        slug_preview = slugify_ko(f"{region}-{board_title}-{longtail}")[:280]
+        print(f"[#{idx}.{attempt+1}] target region={region!r} board={board_title!r} slug={slug_preview!r}")
+
+        # 사전 중복 체크: 같은 slug 글이 이미 발행됐는지 HEAD 로 확인.
+        if _slug_exists(board_slug, slug_preview):
+            print(f"[#{idx}.{attempt+1}] slug already exists, retry with different combo")
+            continue
+
+        try:
+            generated = generate_post(region, board_title, longtail)
+        except Exception as e:
+            print(f"[#{idx}.{attempt+1}] generate failed: {e}", file=sys.stderr)
+            continue
+
+        payload = build_payload(region, region_type, board_slug, board_title, longtail, generated)
+        try:
+            result = publish(payload)
+        except Exception as e:
+            print(f"[#{idx}.{attempt+1}] publish failed: {e}", file=sys.stderr)
+            continue
+
+        if result is None:
+            # 사전 체크 통과했는데 그래도 409 (race condition 등) → 재시도
+            print(f"[#{idx}.{attempt+1}] dup at API, retrying")
+            continue
+
         print(f"[#{idx}] published id={result.get('id')}")
-    return True
+        return True
+
+    print(f"[#{idx}] all {max_retries} retries failed", file=sys.stderr)
+    return False
+
+
+def _slug_exists(board_slug: str, slug: str) -> bool:
+    """Worker post 페이지에 HEAD 요청해 200 이면 이미 존재."""
+    import requests
+    site = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
+    from urllib.parse import quote
+    url = f"https://{site}/{quote(board_slug)}/{quote(slug)}"
+    try:
+        r = requests.head(url, timeout=10, allow_redirects=False)
+        return r.status_code == 200
+    except requests.RequestException:
+        return False  # 통신 실패 시 일단 시도 (publish 단에서 409 처리됨)
 
 
 def main():
