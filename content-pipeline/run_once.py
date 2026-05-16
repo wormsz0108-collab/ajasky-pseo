@@ -14,6 +14,7 @@ import json
 import os
 import random
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -118,39 +119,54 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
     }
 
 
-def main():
-    print(f"[run_once] start {datetime.now(timezone.utc).isoformat()}")
+def publish_one(idx: int = 0) -> bool:
+    """1건 발행 시도. 성공/중복 = True, 에러 = False."""
+    region, region_type, board_slug, board_title, longtail = pick_target()
+    print(f"[#{idx}] target region={region!r} board={board_title!r}")
+    try:
+        generated = generate_post(region, board_title, longtail)
+    except Exception as e:
+        print(f"[#{idx}] generate failed: {e}", file=sys.stderr)
+        return False
+    payload = build_payload(region, region_type, board_slug, board_title, longtail, generated)
+    print(f"[#{idx}] slug={payload['slug']!r}")
+    try:
+        result = publish(payload)
+    except Exception as e:
+        print(f"[#{idx}] publish failed: {e}", file=sys.stderr)
+        return False
+    if result is None:
+        print(f"[#{idx}] duplicate skipped")
+    else:
+        print(f"[#{idx}] published id={result.get('id')}")
+    return True
 
-    # 매 cron 트리거마다 일정 확률로 스킵 → 하루 13~20개 변동 폭 확보
-    # 20 트리거/일 × p(0.825) ≈ 평균 16.5 (이론적으로 13~20 95% 범위)
-    p = float(os.environ.get("PUBLISH_PROBABILITY", "0.825"))
+
+def main():
+    print(f"[run] start {datetime.now(timezone.utc).isoformat()}")
+
+    # 매 cron 트리거마다 N건 발행 (PUBLISH_BATCH_SIZE).
+    # 기본 1. 페이스 확장 시 2~3으로 올려 한 번에 여러 글 발행.
+    batch = int(os.environ.get("PUBLISH_BATCH_SIZE", "1"))
+
+    # 발행 확률 (시드 단계에서 변동 폭 줄이고 싶을 때 1.0; 시드 후엔 0.83~0.9).
+    p = float(os.environ.get("PUBLISH_PROBABILITY", "1.0"))
     if random.random() > p:
         print(f"[skip] random skip (probability={p})")
         return
 
-    region, region_type, board_slug, board_title, longtail = pick_target()
-    print(f"[target] region={region!r} board={board_title!r} longtail={longtail!r}")
+    print(f"[run] batch size = {batch}")
+    success = 0
+    for i in range(batch):
+        if publish_one(i + 1):
+            success += 1
+        # 같은 cron run 안에서 Gemini API rate limit 회피 위해 약간 간격
+        if i < batch - 1:
+            time.sleep(random.uniform(15, 30))
 
-    try:
-        generated = generate_post(region, board_title, longtail)
-    except Exception as e:
-        print(f"[error] generate failed: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    payload = build_payload(region, region_type, board_slug, board_title, longtail, generated)
-    print(f"[generated] title={payload['title']!r}")
-    print(f"[generated] slug={payload['slug']!r}")
-
-    try:
-        result = publish(payload)
-    except Exception as e:
-        print(f"[error] publish failed: {e}", file=sys.stderr)
+    print(f"[run] done {success}/{batch} OK")
+    if success == 0 and batch > 0:
         sys.exit(2)
-
-    if result is None:
-        print("[result] duplicate — skipped (will pick different target next run)")
-    else:
-        print(f"[result] published id={result.get('id')} url={result.get('url')}")
 
 
 if __name__ == "__main__":

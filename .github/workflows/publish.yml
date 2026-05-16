@@ -1,53 +1,75 @@
 name: Daily Publish
 
-# 하루 평균 25건 발행 (랜덤 변동 20~30건).
-# 30개 cron 트리거 × 발행 확률 0.83 (PUBLISH_PROBABILITY) = 평균 25건/일.
+# 페이스: 50 cron 트리거/일 × 배치 2건 = 평균 100건/일 (경쟁사 페이스 매칭).
 #
-# GitHub Actions 무료 한도(2,000분/월) 내 최대 페이스.
-# 실 사용: 30 × 30일 × ~2분/run ≈ 1,800분/월 (무료 한도 90%).
+# Public repo 라 GitHub Actions 무제한 무료.
+# 한 run 안에서 2건 발행 → cron 트리거 횟수 줄여 오버헤드 ↓.
+# 트리거 간격 평균 ~29분, 한 run 안 글 간격 15~30초 (Gemini rate limit 회피).
 #
-# cron 시각은 UTC. KST = UTC + 9.
-# 분 단위 모두 다름 (봇 탐지 회피).
-# 분포: KST 기준 08~24시 빈도 높임 (정상 운영 시간대).
+# cron 시각은 UTC. KST = UTC + 9. 분 단위 모두 다름 (봇 탐지 회피).
 
 on:
   schedule:
-    - cron: "13 0 * * *"     # KST 09:13
-    - cron: "51 0 * * *"     # KST 09:51
-    - cron: "38 1 * * *"     # KST 10:38
-    - cron: "24 2 * * *"     # KST 11:24
-    - cron: "9 3 * * *"      # KST 12:09
-    - cron: "55 3 * * *"     # KST 12:55
-    - cron: "42 4 * * *"     # KST 13:42
-    - cron: "28 5 * * *"     # KST 14:28
-    - cron: "14 6 * * *"     # KST 15:14
-    - cron: "1 7 * * *"      # KST 16:01
-    - cron: "47 7 * * *"     # KST 16:47
-    - cron: "33 8 * * *"     # KST 17:33
-    - cron: "19 9 * * *"     # KST 18:19
-    - cron: "6 10 * * *"     # KST 19:06
-    - cron: "52 10 * * *"    # KST 19:52
-    - cron: "38 11 * * *"    # KST 20:38
-    - cron: "25 12 * * *"    # KST 21:25
-    - cron: "11 13 * * *"    # KST 22:11
-    - cron: "57 13 * * *"    # KST 22:57
-    - cron: "43 14 * * *"    # KST 23:43
-    - cron: "30 15 * * *"    # KST 00:30
-    - cron: "16 16 * * *"    # KST 01:16
+    - cron: "7 0 * * *"      # KST 09:07
+    - cron: "36 0 * * *"     # KST 09:36
+    - cron: "5 1 * * *"      # KST 10:05
+    - cron: "34 1 * * *"     # KST 10:34
+    - cron: "3 2 * * *"      # KST 11:03
+    - cron: "32 2 * * *"     # KST 11:32
+    - cron: "1 3 * * *"      # KST 12:01
+    - cron: "30 3 * * *"     # KST 12:30
+    - cron: "59 3 * * *"     # KST 12:59
+    - cron: "28 4 * * *"     # KST 13:28
+    - cron: "57 4 * * *"     # KST 13:57
+    - cron: "26 5 * * *"     # KST 14:26
+    - cron: "55 5 * * *"     # KST 14:55
+    - cron: "24 6 * * *"     # KST 15:24
+    - cron: "53 6 * * *"     # KST 15:53
+    - cron: "22 7 * * *"     # KST 16:22
+    - cron: "51 7 * * *"     # KST 16:51
+    - cron: "20 8 * * *"     # KST 17:20
+    - cron: "49 8 * * *"     # KST 17:49
+    - cron: "18 9 * * *"     # KST 18:18
+    - cron: "47 9 * * *"     # KST 18:47
+    - cron: "16 10 * * *"    # KST 19:16
+    - cron: "45 10 * * *"    # KST 19:45
+    - cron: "14 11 * * *"    # KST 20:14
+    - cron: "43 11 * * *"    # KST 20:43
+    - cron: "12 12 * * *"    # KST 21:12
+    - cron: "41 12 * * *"    # KST 21:41
+    - cron: "10 13 * * *"    # KST 22:10
+    - cron: "39 13 * * *"    # KST 22:39
+    - cron: "8 14 * * *"     # KST 23:08
+    - cron: "37 14 * * *"    # KST 23:37
+    - cron: "6 15 * * *"     # KST 00:06
+    - cron: "35 15 * * *"    # KST 00:35
+    - cron: "4 16 * * *"     # KST 01:04
+    - cron: "33 16 * * *"    # KST 01:33
     - cron: "2 17 * * *"     # KST 02:02
-    - cron: "49 17 * * *"    # KST 02:49
-    - cron: "35 18 * * *"    # KST 03:35
-    - cron: "21 19 * * *"    # KST 04:21
-    - cron: "7 20 * * *"     # KST 05:07
+    - cron: "31 17 * * *"    # KST 02:31
+    - cron: "0 18 * * *"     # KST 03:00
+    - cron: "29 18 * * *"    # KST 03:29
+    - cron: "58 18 * * *"    # KST 03:58
+    - cron: "27 19 * * *"    # KST 04:27
+    - cron: "56 19 * * *"    # KST 04:56
+    - cron: "25 20 * * *"    # KST 05:25
     - cron: "54 20 * * *"    # KST 05:54
-    - cron: "40 21 * * *"    # KST 06:40
-    - cron: "27 22 * * *"    # KST 07:27
+    - cron: "23 21 * * *"    # KST 06:23
+    - cron: "52 21 * * *"    # KST 06:52
+    - cron: "21 22 * * *"    # KST 07:21
+    - cron: "50 22 * * *"    # KST 07:50
+    - cron: "19 23 * * *"    # KST 08:19
+    - cron: "48 23 * * *"    # KST 08:48
   workflow_dispatch:
     inputs:
       force_run:
         description: "강제 발행 (확률 무시)"
         type: boolean
         default: true
+      batch_size:
+        description: "한 번에 발행할 글 수"
+        type: string
+        default: "2"
 
 permissions:
   contents: read
@@ -59,7 +81,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -87,5 +109,6 @@ jobs:
           R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
           WORKER_API:            https://ajasky.co.kr/api/posts
           SITE_DOMAIN:           ajasky.co.kr
-          PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '0.83' }}
+          PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '1.0' }}
+          PUBLISH_BATCH_SIZE:    ${{ inputs.batch_size || '2' }}
         run: python content-pipeline/run_once.py
