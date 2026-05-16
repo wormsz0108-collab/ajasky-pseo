@@ -81,8 +81,24 @@ def build_og(slug: str, region: str, board_title: str) -> str:
     if not os.environ.get("R2_ACCESS_KEY_ID"):
         return fallback_url
 
+    # 소스 사진 읽기 — R2 boto3 GetObject가 AccessDenied 나면 HTTPS public 으로 폴백.
+    # (R2 API 토큰이 write-only 일 때 read는 어차피 막힘. Worker /media/* 가 public.)
+    source_bytes: bytes | None = None
     try:
         source_bytes = get_object(photo_key)
+    except Exception as e:
+        print(f"[info] R2 GetObject failed, trying HTTPS public read: {e}", file=sys.stderr)
+        try:
+            import requests as _requests
+            site = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
+            r = _requests.get(f"https://{site}/media/{photo_key}", timeout=30)
+            r.raise_for_status()
+            source_bytes = r.content
+        except Exception as e2:
+            print(f"[warn] HTTPS source read also failed: {e2}", file=sys.stderr)
+            return fallback_url
+
+    try:
         ribbon, head_main = _split_board(board_title)
         composed = compose_og(
             source_bytes,
@@ -94,7 +110,7 @@ def build_og(slug: str, region: str, board_title: str) -> str:
         put_object(og_key, composed, "image/jpeg")
         return f"/media/{og_key}"
     except Exception as e:
-        print(f"[warn] OG compose failed, using raw photo: {e}", file=sys.stderr)
+        print(f"[warn] OG compose/upload failed, using raw photo: {e}", file=sys.stderr)
         return fallback_url
 
 
