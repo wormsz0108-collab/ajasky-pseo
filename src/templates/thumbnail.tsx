@@ -18,6 +18,18 @@ export function Thumbnail(props: ThumbnailProps) {
     brandName, phone, alt = '',
   } = props;
 
+  // og/ 경로는 Python compose_og 로 디자인(리본/헤드라인/브랜드바)이 이미 baked in.
+  // 그 위에 HTML 오버레이 또 그리면 텍스트가 두 번 겹쳐 보이므로 plain img만 출력.
+  // photos/ 등 raw 사진이면 기존 HTML 오버레이로 디자인 입힘.
+  const isBaked = imageUrl.includes('/og/');
+  if (isBaked) {
+    return html`
+      <div class="hero hero-baked">
+        <img src="${imageUrl}" alt="${alt}" loading="lazy">
+      </div>
+    `;
+  }
+
   return html`
     <div class="hero">
       <img src="${imageUrl}" alt="${alt}" loading="lazy">
