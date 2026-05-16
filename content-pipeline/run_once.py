@@ -26,6 +26,8 @@ from publish import publish, slugify_ko
 from r2_client import get_object, put_object
 from regions import all_region_targets
 
+import requests as _requests
+
 
 def _split_board(board_title: str) -> tuple[str, str]:
     """보드 → (ribbon, headline_main). thumbnail-text.ts BOARD_THUMBNAIL_MAP 과 동일."""
@@ -106,11 +108,32 @@ def build_og(slug: str, region: str, board_title: str) -> str:
             headline_prefix=region,    # 큰 글자 1줄 = 지역
             headline_main=head_main,   # 큰 글자 2줄 = 메인 키워드
         )
-        og_key = f"og/{slug}.jpg"
-        put_object(og_key, composed, "image/jpeg")
-        return f"/media/{og_key}"
     except Exception as e:
-        print(f"[warn] OG compose/upload failed, using raw photo: {e}", file=sys.stderr)
+        print(f"[warn] OG compose failed: {e}", file=sys.stderr)
+        return fallback_url
+
+    # 업로드: R2 boto3 PutObject 가 AccessDenied 라서 Worker /api/og-upload 경유.
+    # Worker는 MEDIA binding 으로 R2 full 권한이라 가능.
+    try:
+        token = os.environ.get("WORKER_API_TOKEN")
+        if not token:
+            print("[warn] WORKER_API_TOKEN missing, og upload skipped", file=sys.stderr)
+            return fallback_url
+        site = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
+        r = _requests.post(
+            f"https://{site}/api/og-upload",
+            params={"slug": slug},
+            data=composed,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "image/jpeg",
+            },
+            timeout=30,
+        )
+        r.raise_for_status()
+        return r.json()["url"]
+    except Exception as e:
+        print(f"[warn] og upload via worker failed: {e}", file=sys.stderr)
         return fallback_url
 
 

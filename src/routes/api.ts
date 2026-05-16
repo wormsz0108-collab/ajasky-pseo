@@ -119,4 +119,69 @@ api.delete('/posts/:id{[0-9]+}', async (c) => {
   return c.json({ deleted: id });
 });
 
+// OG 이미지 업로드 — R2 PutObject가 Python boto3에서 AccessDenied이므로 Worker 경유.
+// body는 JPG raw bytes, query에 slug.
+api.post('/og-upload', async (c) => {
+  const slug = c.req.query('slug');
+  if (!slug || slug.length > 300) return c.json({ error: 'invalid_slug' }, 400);
+  const body = await c.req.arrayBuffer();
+  if (body.byteLength < 1000 || body.byteLength > 2_000_000) {
+    return c.json({ error: 'invalid_size', size: body.byteLength }, 400);
+  }
+  const key = `og/${slug}.jpg`;
+  await c.env.MEDIA.put(key, body, {
+    httpMetadata: {
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=2592000, immutable',
+    },
+  });
+  return c.json({ url: `/media/${key}` });
+});
+
+// 백필 — og_image 재합성 대상 목록.
+// ?missing_og=1 → 아직 raw photo 가리키는 글만. ?limit=N&offset=M 페이지네이션.
+api.get('/posts/list', async (c) => {
+  const missingOg = c.req.query('missing_og') === '1';
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '20', 10)));
+  const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0', 10));
+
+  const where = missingOg
+    ? "WHERE p.status='published' AND (p.og_image_url IS NULL OR p.og_image_url LIKE '/media/photos/%' OR p.og_image_url LIKE '/media/default-%')"
+    : "WHERE p.status='published'";
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.id, p.slug, p.region, p.og_image_url,
+            b.slug as board_slug, b.title as board_title,
+            s.domain as site_domain
+     FROM posts p
+     JOIN boards b ON p.board_id = b.id
+     JOIN sites s ON p.site_id = s.id
+     ${where}
+     ORDER BY p.id ASC
+     LIMIT ? OFFSET ?`
+  ).bind(limit, offset).all<{
+    id: number; slug: string; region: string; og_image_url: string | null;
+    board_slug: string; board_title: string; site_domain: string;
+  }>();
+
+  return c.json({ posts: results, limit, offset });
+});
+
+// 백필 — og_image_url 만 갱신.
+api.patch('/posts/:id{[0-9]+}/og', async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  let body: { og_image_url?: string };
+  try { body = await c.req.json(); }
+  catch { return c.json({ error: 'invalid_json' }, 400); }
+  const url = body.og_image_url;
+  if (typeof url !== 'string' || !url.startsWith('/media/')) {
+    return c.json({ error: 'invalid_og_url' }, 400);
+  }
+  const r = await c.env.DB.prepare(
+    'UPDATE posts SET og_image_url = ?, modified_at = ? WHERE id = ?'
+  ).bind(url, new Date().toISOString(), id).run();
+  if (r.meta.changes === 0) return c.json({ error: 'not_found' }, 404);
+  return c.json({ id, og_image_url: url });
+});
+
 export default api;
