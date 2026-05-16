@@ -18,6 +18,7 @@ import { nearbyRegions } from './lib/regions';
 import {
   buildDummyPost, buildDummySections, buildDummyFaq,
 } from './lib/dummy';
+import { recoveryCron } from './cron/recovery';
 
 const POSTS_PER_PAGE = 20;
 
@@ -263,4 +264,9 @@ app.notFound(async (c) => {
   return new Response(html, { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
 });
 
-export default app;
+export default {
+  fetch: app.fetch.bind(app),
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(recoveryCron(env));
+  },
+};

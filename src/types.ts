@@ -2,6 +2,7 @@ export interface Env {
   DB: D1Database;
   MEDIA: R2Bucket;
   WORKER_API_TOKEN_HASH: string;
+  GITHUB_DISPATCH_TOKEN: string;
 }
 
 export interface Site {
