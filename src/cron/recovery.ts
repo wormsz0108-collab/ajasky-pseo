@@ -1,6 +1,6 @@
 import type { Env } from '../types';
 
-const DAILY_TARGET = 100;
+const DAILY_TARGET = 50;   // 네이버 일일 색인 요청 한도 50과 맞춤
 const REPO = 'wormsz0108-collab/ajasky-pseo';
 const BRANCH = 'master';
 const MIN_GAP_TO_DISPATCH = 3;
