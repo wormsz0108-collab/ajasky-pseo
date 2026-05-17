@@ -44,9 +44,14 @@ def _board_parts(board_title: str) -> tuple[str, str]:
 
 
 def derive_keywords(region: str, board_title: str) -> list[str]:
-    """region + board → 자연스러운 키워드 변형 리스트 (중복 제거, 8~10개).
+    """region + board → 사장님 PowerLink 패턴 그대로 (최대 20개, 중복 제거).
 
-    사장님 정책: 브랜드("아자스카이")는 meta_keywords 에 넣지 않음.
+    패턴 (사장님 정책):
+      - 광역(경기/충북 등) 접두는 제외
+      - A 시군: 풀/짧음 (가평군 / 가평)
+      - B 구:   풀/짧음 (강남구 / 강남)
+      - C 동읍면: 풀/짧음 (가평읍 / 가평, 신림동 / 신림)
+      - 메인: 스카이차 / 스카이 (보드별: 고소작업차량 / 고소작업차)
     """
     r = _tokenize_region(region)
     board_main, board_specific = _board_parts(board_title)
@@ -58,79 +63,64 @@ def derive_keywords(region: str, board_title: str) -> list[str]:
         if s and s not in kw:
             kw.append(s)
 
-    # 사용자는 종종 키워드 끝 글자 생략하고 검색: "스카이차" → "스카이", "고소작업차량" → "고소작업차"
-    # 매칭용 보조 변형만 추가. 우리 글 제목/본문 디자인은 항상 풀표기 유지.
+    # 메인 키워드 변형: 풀 + 짧음 ("스카이차" → "스카이", "고소작업차량" → "고소작업차")
     SHORT_MAIN_MAP = {
         "스카이차": "스카이",
         "고소작업차량": "고소작업차",
     }
-    short_main = SHORT_MAIN_MAP.get(board_main, "")
+    main_full = board_main                                 # "스카이차"
+    main_short = SHORT_MAIN_MAP.get(board_main, "")       # "스카이"
+    mains = [m for m in (main_full, main_short) if m]
 
-    # 시/군/구/동/읍/면 접미사 떼면 더 짧은 형태로도 검색됨
-    # ("화성시" → "화성", "신림동" → "신림", "향남읍" → "향남", "남양읍" → "남양")
+    # 접미사 떼서 짧은 형태: "화성시" → "화성", "신림동" → "신림", "향남읍" → "향남"
     def _strip(s: str) -> str:
         for suf in ("특별자치도", "특별자치시", "광역시", "특별시", "시", "군", "구", "동", "읍", "면"):
             if s.endswith(suf) and len(s) > len(suf):
                 return s[:-len(suf)]
         return s
 
-    city_full = r["city"]                                  # "화성시"
-    city_short = _strip(city_full) if city_full else ""    # "화성"
-    dong_full = r["dong"]                                  # "신림동"
-    dong_short = _strip(dong_full) if dong_full else ""    # "신림"
-    # 1글자 약어는 일반 단어와 충돌 우려 ("송" → 의미 너무 약함). 2글자 이상만 사용.
+    city_full = r["city"]                                  # "가평군" / "강남구" / "화성시"
+    city_short = _strip(city_full) if city_full else ""    # "가평" / "강남" / "화성"
+    dong_full = r["dong"]                                  # "가평읍" / "신림동"
+    dong_short = _strip(dong_full) if dong_full else ""    # "가평" / "신림"
+    # 1글자 약어는 일반 단어 충돌 우려 ("송" 등) — 2글자 이상만
     if len(city_short) < 2:
         city_short = ""
     if len(dong_short) < 2:
         dong_short = ""
 
-    def add_combos(prefix: str) -> None:
-        """prefix + (board_title / board_main / short_main) × (띄움 / 붙임)"""
-        if not prefix:
-            return
-        # 풀 보드 (e.g., "스카이차 이용료")는 띄움 형태만 — 붙임은 부자연
-        if board_specific:
-            add(f"{prefix} {board_title}")
-        # board_main: 띄움 + 붙임
-        add(f"{prefix} {board_main}")
-        add(f"{prefix}{board_main}")
-        # short_main: 띄움 + 붙임
-        if short_main:
-            add(f"{prefix} {short_main}")
-            add(f"{prefix}{short_main}")
+    # 접두사 후보: city(full/short), dong(full/short), city+dong (full/short combo)
+    # — 광역(province) 은 제외
+    city_variants = [c for c in (city_full, city_short) if c]
+    dong_variants = [d for d in (dong_full, dong_short) if d]
 
-    # 1) 풀 표기 (region + board_title)
-    add(f"{region} {board_title}")
+    prefixes: list[str] = []
+    # city+dong 결합 (가장 long-tail)
+    for c in city_variants:
+        for d in dong_variants:
+            prefixes.append(f"{c} {d}")
+    # dong 단독
+    prefixes.extend(dong_variants)
+    # city 단독
+    prefixes.extend(city_variants)
+    # 광역만 있는 글(예: 지역="경기"/"세종") fallback — 광역을 prefix 로 사용
+    if not city_variants and not dong_variants and r["province"]:
+        prefixes.append(r["province"])
 
-    # 2) 시군구(full)부터 시작 (광역 생략) — 가장 흔한 검색 패턴
-    if city_full:
-        if dong_full:
-            add(f"{city_full} {dong_full} {board_title}")  # "화성시 송동 스카이차 일대"
-        else:
-            add(f"{city_full} {board_title}")              # "화성시 스카이차 일대"
+    # board_specific 가 있는 경우 (예: "스카이차 이용료") — 가장 구체적인 long-tail 1개 추가
+    if board_specific and city_variants:
+        most_specific_prefix = (
+            f"{city_full} {dong_full}" if (city_full and dong_full)
+            else (city_full or dong_full)
+        )
+        add(f"{most_specific_prefix} {board_title}")
 
-    # 3) 동(洞) 변형 — 풀/짧음 × 띄움/붙임 × 메인/숏메인
-    if dong_full:
-        add_combos(dong_full)                              # 신림동 *
-    if dong_short and dong_short != dong_full:
-        add_combos(dong_short)                             # 신림 *
+    # prefix × main 조합 (메인 풀/짧음 모두)
+    for prefix in prefixes:
+        for m in mains:
+            add(f"{prefix} {m}")
 
-    # 4) 시군구 변형 — 풀/짧음 × 띄움/붙임 × 메인/숏메인
-    if city_full:
-        add_combos(city_full)                              # 화성시 *
-    if city_short and city_short != city_full:
-        add_combos(city_short)                             # 화성 *
-
-    # 5) 보드 자체
-    add(board_title)                                       # "스카이차 이용료"
-    if board_specific:
-        add(board_main)                                    # "스카이차"
-
-    # 6) 광역 + 보드 메인
-    if r["province"] and r["province"] != city_full:
-        add(f"{r['province']} {board_main}")               # "서울 스카이차"
-
-    # 7) 최대 20개로 자름 (스팸 위험 회피 — 30+ 부터 패널티)
+    # 최대 20개로 자름 (스팸 위험 회피)
     return kw[:20]
 
 
