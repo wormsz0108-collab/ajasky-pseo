@@ -66,9 +66,10 @@ def derive_keywords(region: str, board_title: str) -> list[str]:
     }
     short_main = SHORT_MAIN_MAP.get(board_main, "")
 
-    # 시/군/구/동 접미사 떼면 더 짧은 형태로도 검색됨 ("화성시" → "화성", "신림동" → "신림")
+    # 시/군/구/동/읍/면 접미사 떼면 더 짧은 형태로도 검색됨
+    # ("화성시" → "화성", "신림동" → "신림", "향남읍" → "향남", "남양읍" → "남양")
     def _strip(s: str) -> str:
-        for suf in ("특별자치도", "특별자치시", "광역시", "특별시", "시", "군", "구", "동"):
+        for suf in ("특별자치도", "특별자치시", "광역시", "특별시", "시", "군", "구", "동", "읍", "면"):
             if s.endswith(suf) and len(s) > len(suf):
                 return s[:-len(suf)]
         return s

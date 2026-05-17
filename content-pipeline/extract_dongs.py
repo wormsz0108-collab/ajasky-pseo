@@ -28,18 +28,22 @@ TARGET = {
 
 
 def extract_dongs_from_pdf(pdf_path: Path) -> list[str]:
-    """PDF 한 장에서 마지막 토큰(법정동) 만 모음."""
-    dongs: list[str] = []
+    """PDF 한 장에서 마지막 토큰(법정동/읍/면) 모음.
+
+    동 외에도 읍/면도 행정 단위라 검색 대상에 포함 (예: 화성시 향남읍, 양평군 양서면).
+    """
+    SUFFIXES = ("동", "읍", "면")
+    items: list[str] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             text = page.extract_text() or ""
             for line in text.split("\n"):
                 parts = line.strip().split()
-                if len(parts) >= 3 and parts[-1].endswith("동"):
-                    dong = parts[-1]
-                    if dong not in dongs:
-                        dongs.append(dong)
-    return dongs
+                if len(parts) >= 3 and parts[-1].endswith(SUFFIXES):
+                    item = parts[-1]
+                    if item not in items:
+                        items.append(item)
+    return items
 
 
 def main():
