@@ -150,7 +150,7 @@ api.get('/posts/list', async (c) => {
     : "WHERE p.status='published'";
 
   const { results } = await c.env.DB.prepare(
-    `SELECT p.id, p.slug, p.region, p.og_image_url,
+    `SELECT p.id, p.slug, p.region, p.og_image_url, p.meta_keywords,
             b.slug as board_slug, b.title as board_title,
             s.domain as site_domain
      FROM posts p
@@ -161,10 +161,28 @@ api.get('/posts/list', async (c) => {
      LIMIT ? OFFSET ?`
   ).bind(limit, offset).all<{
     id: number; slug: string; region: string; og_image_url: string | null;
+    meta_keywords: string | null;
     board_slug: string; board_title: string; site_domain: string;
   }>();
 
   return c.json({ posts: results, limit, offset });
+});
+
+// 백필 — meta_keywords 갱신.
+api.patch('/posts/:id{[0-9]+}/keywords', async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  let body: { meta_keywords?: string };
+  try { body = await c.req.json(); }
+  catch { return c.json({ error: 'invalid_json' }, 400); }
+  const kw = body.meta_keywords;
+  if (typeof kw !== 'string' || !kw.trim() || kw.length > 500) {
+    return c.json({ error: 'invalid_keywords' }, 400);
+  }
+  const r = await c.env.DB.prepare(
+    'UPDATE posts SET meta_keywords = ?, modified_at = ? WHERE id = ?'
+  ).bind(kw, new Date().toISOString(), id).run();
+  if (r.meta.changes === 0) return c.json({ error: 'not_found' }, 404);
+  return c.json({ id, meta_keywords: kw });
 });
 
 // 백필 — og_image_url 만 갱신.

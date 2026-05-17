@@ -20,6 +20,7 @@ from pathlib import Path
 
 from generate import generate_post
 from image_pool import pick_photo_key
+from keyword_variants import derive_keywords
 from longtails import get_longtails, LONGTAILS_BY_BOARD
 from og_compose import compose_og
 from publish import publish, slugify_ko
@@ -142,6 +143,12 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
     slug = slugify_ko(f"{region}-{board_title}-{longtail}")[:280]
     og_url = build_og(slug, region, board_title)
 
+    # meta_keywords 는 Gemini 출력 무시하고 derive_keywords 로 통일.
+    # 사용자가 "관악구스카이차" / "관악구 스카이차" / "서울 관악구 스카이차" 등
+    # 어떻게 쳐도 매칭되도록 자동 변형 생성. 스팸 회피: 최대 10개.
+    keywords = derive_keywords(region, board_title)
+    meta_keywords = ",".join(keywords)
+
     return {
         "site_domain": SITE_DOMAIN,
         "board_slug": board_slug,
@@ -150,7 +157,7 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
         "region": region,
         "region_type": region_type,
         "meta_description": generated["meta_description"],
-        "meta_keywords": generated["meta_keywords"],
+        "meta_keywords": meta_keywords,
         "body_md": generated["body_md"],
         "toc_json": json.dumps(generated.get("toc", []), ensure_ascii=False),
         "faq_json": json.dumps(generated.get("faq", []), ensure_ascii=False),
