@@ -34,18 +34,18 @@ SECTION_SYNONYMS = {
 }
 
 
-# 글 제목 포맷 (10종)
+# 글 제목 포맷 (10종) — 전부 "{region} {board}" 로 시작 (네이버 SEO: 키워드 앞쪽일수록 가중치↑)
 TITLE_FORMATS = [
     "{region} {board}, {longtail}",
-    "{longtail} — {region} {board} 안내",
-    "{region}에서 {board}, {longtail}",
+    "{region} {board} — {longtail}",
+    "{region} {board}: {longtail}",
+    "{region} {board} 안내 — {longtail}",
     "{region} {board} 알아보기 ({longtail})",
-    "{longtail}, {region} {board} 챙길 것",
     "{region} {board} 가이드: {longtail}",
-    "{region} 지역 {board} — {longtail}",
-    "{board} 문의 전, {region}에서 {longtail}",
     "{region} {board} 정리 — {longtail}",
-    "{longtail} 정리 | {region} {board}",
+    "{region} {board} | {longtail}",
+    "{region} {board} 핵심 — {longtail}",
+    "{region} {board} 체크 — {longtail}",
 ]
 
 
