@@ -11,7 +11,7 @@ export interface ThumbnailText {
 const BOARD_THUMBNAIL_MAP: Record<string, { ribbon: string; main: string }> = {
   '스카이차':      { ribbon: '스카이차', main: '스카이차' },
   '스카이차 일대':  { ribbon: '일대',    main: '스카이차' },
-  '스카이 작업차':  { ribbon: '작업차',  main: '스카이' },
+  '스카이 작업차':  { ribbon: '작업차',  main: '스카이차' },
   '스카이차 요금':  { ribbon: '요금',    main: '스카이차' },
   '스카이차 비용':  { ribbon: '비용',    main: '스카이차' },
   '스카이차 가격':  { ribbon: '가격',    main: '스카이차' },
