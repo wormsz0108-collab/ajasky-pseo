@@ -132,10 +132,81 @@ def build_og(slug: str, region: str, board_title: str) -> str:
             timeout=30,
         )
         r.raise_for_status()
-        return r.json()["url"]
+        hero_url = r.json()["url"]
     except Exception as e:
         print(f"[warn] og upload via worker failed: {e}", file=sys.stderr)
         return fallback_url
+
+    # 본문 i=1, i=3, i=5 위치용 body 변형 3장 추가 생성 — 같은 텍스트, 다른 사진.
+    # post.tsx 가 /media/og/body{N}-{slug}.jpg 로 직접 참조하므로 이 URL 들이
+    # 존재해야 함. hero photo 와 중복 회피해서 4장 모두 다른 photo 사용.
+    try:
+        _build_body_og_variants(slug, region, board_title, hero_photo_n=_photo_n(photo_key))
+    except Exception as e:
+        # 본문 변형 실패는 치명적이지 않음 — hero 만 있으면 글은 정상 노출
+        print(f"[warn] body og variants build failed: {e}", file=sys.stderr)
+    return hero_url
+
+
+def _photo_n(photo_key: str) -> int:
+    """photo_key='photos/045.jpg' → 45."""
+    import re
+    m = re.search(r"(\d+)\.jpg$", photo_key)
+    return int(m.group(1)) if m else 0
+
+
+def _djb2(s: str) -> int:
+    h = 5381
+    for c in s.encode("utf-8"):
+        h = ((h << 5) + h + c) & 0xFFFFFFFF
+    return h
+
+
+def _build_body_og_variants(slug: str, region: str, board_title: str, hero_photo_n: int) -> None:
+    """본문 i=1, i=3, i=5 위치용 body1/body2/body3 변형 합성 + 업로드.
+
+    같은 글 안에서 hero+body1+body2+body3 = 4장 모두 다른 photo 가 되도록 회피.
+    """
+    POOL_SIZE = 121
+    used: set[int] = {hero_photo_n}
+    picked: list[int] = []
+    seed = 0
+    while len(picked) < 3 and seed < POOL_SIZE * 2:
+        n = (_djb2(f"{slug}#body{seed}") % POOL_SIZE) + 1
+        if n not in used:
+            used.add(n)
+            picked.append(n)
+        seed += 1
+    if len(picked) < 3:
+        return
+
+    token = os.environ["WORKER_API_TOKEN"]
+    site = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
+    ribbon, head_main = _split_board(board_title)
+
+    for i, photo_n in enumerate(picked, 1):
+        photo_key = f"photos/{photo_n:03d}.jpg"
+        try:
+            r = _requests.get(f"https://{site}/media/{photo_key}", timeout=30)
+            r.raise_for_status()
+            composed = compose_og(
+                r.content,
+                ribbon=ribbon,
+                headline_prefix=region,
+                headline_main=head_main,
+            )
+            _requests.post(
+                f"https://{site}/api/og-upload",
+                params={"slug": slug, "variant": f"body{i}"},
+                data=composed,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "image/jpeg",
+                },
+                timeout=30,
+            ).raise_for_status()
+        except Exception as e:
+            print(f"[warn] body{i} variant failed: {e}", file=sys.stderr)
 
 
 def build_payload(region: str, region_type: str, board_slug: str, board_title: str, longtail: str, generated: dict) -> dict:
