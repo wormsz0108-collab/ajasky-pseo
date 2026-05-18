@@ -59,17 +59,18 @@ REGIONS_BY_LEVEL = {
 def all_region_targets():
     """발행 대상 지역. (region_label, region_type) 리스트.
 
-    사장님 실 서비스 권역 한정 (2026-05-14):
-      광역 전체:  서울, 경기, 인천, 세종, 대전, 충남
-      충북 일부:  청주, 충주 만
+    사장님 실 서비스 권역 한정 (2026-05-18 축소):
+      광역 전체:  서울, 경기, 인천
+      충남 일부:  천안시, 아산시 만
+      (세종·대전·충북·충남나머지 제외 — 출장 권역 밖)
 
     3단계 레벨 모두 포함:
-      광역    (서울, 경기, ...)             ← 6개
-      시군구  (서울 강남구, 경기 수원시 ...)  ← ~90개
-      법정동  (서울 강남구 청담동 ...)         ← ~1,400개 (PDF 추출 자동)
+      광역    (서울, 경기, 인천)            ← 3개
+      시군구  (서울 강남구, 경기 수원시 ...)  ← ~68개
+      법정동  (서울 강남구 청담동 ...)         ← 권역 내 동/읍/면만
     """
-    INCLUDE_FULL_REGIONS = {"서울", "경기", "인천", "세종", "대전", "충남"}
-    INCLUDE_CHUNGBUK_CITIES = {"청주시", "충주시"}
+    INCLUDE_FULL_REGIONS = {"서울", "경기", "인천"}
+    INCLUDE_CHUNGNAM_CITIES = {"천안시", "아산시"}
 
     out = []
 
@@ -83,19 +84,24 @@ def all_region_targets():
         if parent in INCLUDE_FULL_REGIONS:
             for c in children:
                 out.append((f"{parent} {c}", "시군구"))
-        elif parent == "충북":
+        elif parent == "충남":
             for c in children:
-                if c in INCLUDE_CHUNGBUK_CITIES:
+                if c in INCLUDE_CHUNGNAM_CITIES:
                     out.append((f"{parent} {c}", "시군구"))
 
     # 3) 법정동 (PDF 추출, region_dongs.py)
     try:
         from region_dongs import REGION_DONGS
         for parent_label, cities in REGION_DONGS.items():
-            for city, dongs in cities.items():
-                for dong in dongs:
-                    # 예: "서울 강남구 청담동"
-                    out.append((f"{parent_label} {city} {dong}", "법정동"))
+            if parent_label in INCLUDE_FULL_REGIONS:
+                for city, dongs in cities.items():
+                    for dong in dongs:
+                        out.append((f"{parent_label} {city} {dong}", "법정동"))
+            elif parent_label == "충남":
+                for city, dongs in cities.items():
+                    if city in INCLUDE_CHUNGNAM_CITIES:
+                        for dong in dongs:
+                            out.append((f"{parent_label} {city} {dong}", "법정동"))
     except ImportError:
         pass  # PDF 추출 안 됐을 때 안전 fallback
 
