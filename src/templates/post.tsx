@@ -92,8 +92,10 @@ export function PostPage(props: PostPageProps) {
         <section id="${s.anchor}">
           <h2><span class="num">${s.num}</span>${s.title}</h2>
           ${raw(s.bodyHtml)}
-          ${i === 1 ? Thumbnail({
-            imageUrl: post.og_image_url || '/media/default-hero.jpg',
+          ${[1, 3, 5].includes(i) ? Thumbnail({
+            // 본문 3장 모두 브랜디드 — 같은 디자인/텍스트, 배경 사진만 변형 (body1/body2/body3).
+            // R2 키: og/body{N}-{slug}.jpg. backfill_body_og.py 가 사전 생성.
+            imageUrl: `/media/og/body${(i + 1) / 2}-${post.slug}.jpg`,
             ribbon: thumbnailText.ribbon,
             headlinePrefix: thumbnailText.headlinePrefix,
             headlineHighlight: thumbnailText.headlineHighlight,
@@ -101,12 +103,6 @@ export function PostPage(props: PostPageProps) {
             phone: site.phone,
             alt: `${post.region} ${board.title} 대표 이미지`,
           }) : ''}
-          ${(i === 3 || i === 5) && bodyPhotos[Math.floor(i / 2)] ? html`
-            <figure class="figure">
-              <img src="${bodyPhotos[Math.floor(i / 2)].url}" alt="${bodyPhotos[Math.floor(i / 2)].caption}" loading="lazy">
-              <figcaption>${bodyPhotos[Math.floor(i / 2)].caption}</figcaption>
-            </figure>
-          ` : ''}
         </section>
       `)}
 

@@ -120,15 +120,21 @@ api.delete('/posts/:id{[0-9]+}', async (c) => {
 });
 
 // OG 이미지 업로드 — R2 PutObject가 Python boto3에서 AccessDenied이므로 Worker 경유.
-// body는 JPG raw bytes, query에 slug.
+// body는 JPG raw bytes, query: slug, 선택적 variant (body1/body2/body3 등).
+//   - 기본 (variant 없음): R2 키 = "og/{slug}.jpg" (hero)
+//   - variant 있음:        R2 키 = "og/{variant}-{slug}.jpg" (본문 변형)
 api.post('/og-upload', async (c) => {
   const slug = c.req.query('slug');
   if (!slug || slug.length > 300) return c.json({ error: 'invalid_slug' }, 400);
+  const variant = c.req.query('variant') ?? '';
+  if (variant && !/^[a-z0-9-]{1,20}$/.test(variant)) {
+    return c.json({ error: 'invalid_variant' }, 400);
+  }
   const body = await c.req.arrayBuffer();
   if (body.byteLength < 1000 || body.byteLength > 2_000_000) {
     return c.json({ error: 'invalid_size', size: body.byteLength }, 400);
   }
-  const key = `og/${slug}.jpg`;
+  const key = variant ? `og/${variant}-${slug}.jpg` : `og/${slug}.jpg`;
   await c.env.MEDIA.put(key, body, {
     httpMetadata: {
       contentType: 'image/jpeg',
