@@ -13,6 +13,7 @@ interface LayoutProps {
   activeBoardSlug?: string | null;
   keywords?: string;
   jsonLd?: object | null;
+  noindex?: boolean;
   children?: any;
 }
 
@@ -25,7 +26,7 @@ const PhoneIcon = () => html`
 export function Layout(props: LayoutProps) {
   const {
     site, boards, title, description, canonicalPath,
-    ogImageUrl, ogType = 'website', activeBoardSlug, keywords, jsonLd, children,
+    ogImageUrl, ogType = 'website', activeBoardSlug, keywords, jsonLd, noindex, children,
   } = props;
 
   const fullUrl = `https://${site.domain}${canonicalPath}`;
@@ -40,6 +41,9 @@ export function Layout(props: LayoutProps) {
 <title>${title}</title>
 <meta name="description" content="${description}">
 ${keywords ? html`<meta name="keywords" content="${keywords}">` : ''}
+${noindex ? html`<meta name="robots" content="noindex,follow,noarchive,nosnippet">
+<meta name="Yeti" content="noindex,follow,noarchive,nosnippet">
+<meta name="googlebot" content="noindex,follow,noarchive,nosnippet">` : ''}
 <link rel="canonical" href="${fullUrl}">
 
 <meta property="og:type" content="${ogType}">

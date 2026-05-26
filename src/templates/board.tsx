@@ -42,7 +42,7 @@ export function BoardPage(props: BoardPageProps) {
       ${posts.length === 0 ? html`
         <p style="color:var(--meta);padding:40px 0">아직 등록된 글이 없습니다.</p>
       ` : html`
-        <div class="grid">
+        <div class="grid" data-nosnippet>
           ${posts.map(p => html`
             <a class="card" href="/${encodeURIComponent(board.slug)}/${encodeURIComponent(p.slug)}">
               <div class="thumb">
@@ -87,6 +87,7 @@ export function BoardPage(props: BoardPageProps) {
     activeBoardSlug: board.slug,
     keywords: `${board.title},${site.site_name},${board.title} 안내,${board.title} 비교`,
     jsonLd,
+    noindex: true,
     children: inner,
   });
 }

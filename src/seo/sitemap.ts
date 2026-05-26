@@ -40,10 +40,7 @@ export function buildUrlSet(entries: UrlEntry[]): string {
     return `  <url>\n    ${parts.join('\n    ')}\n  </url>`;
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset
-    xmlns="http://www.sitemaps.org/schemas/sitemap-0.9"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap-0.9 http://www.sitemaps.org/schemas/sitemap-0.9/sitemap.xsd">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${items}
 </urlset>`;
 }
@@ -55,10 +52,7 @@ export function buildSitemapIndex(maps: { loc: string; lastmod?: string }[]): st
     return `  <sitemap>\n    ${parts.join('\n    ')}\n  </sitemap>`;
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex
-    xmlns="http://www.sitemaps.org/schemas/sitemap-0.9"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap-0.9 http://www.sitemaps.org/schemas/siteindex.xsd">
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${items}
 </sitemapindex>`;
 }
@@ -74,9 +68,10 @@ export async function renderSitemapIndex(env: Env, site: Site): Promise<string> 
   const numPostSitemaps = Math.max(1, Math.ceil(total / POSTS_PER_SITEMAP));
   const today = nowIso();
 
+  // 보드는 noindex,follow 처리되어 SERP 노출에서 제외 — sitemap에서도 제거.
+  // /sitemap-boards-1.xml 경로는 빈 urlset을 반환해 캐시된 봇이 와도 안전.
   const maps: { loc: string; lastmod?: string }[] = [
     { loc: urlFor(site, '/sitemap-pages-1.xml'), lastmod: today },
-    { loc: urlFor(site, '/sitemap-boards-1.xml'), lastmod: today },
   ];
   if (total > 0) {
     for (let i = 1; i <= numPostSitemaps; i++) {
@@ -92,17 +87,10 @@ export function renderPagesSitemap(site: Site): string {
   ]);
 }
 
-export async function renderBoardsSitemap(env: Env, site: Site): Promise<string> {
-  const { results } = await env.DB.prepare(
-    'SELECT slug FROM boards WHERE site_id = ? ORDER BY display_order'
-  ).bind(site.id).all<{ slug: string }>();
-  const entries: UrlEntry[] = results.map(b => ({
-    loc: urlFor(site, `/${b.slug}`),
-    changefreq: 'weekly',
-    priority: 0.8,
-    lastmod: nowIso(),
-  }));
-  return buildUrlSet(entries);
+export async function renderBoardsSitemap(_env: Env, _site: Site): Promise<string> {
+  // 보드는 noindex,follow — 더 이상 색인 대상이 아님.
+  // 과거에 색인된 /sitemap-boards-1.xml 캐시 봇이 와도 빈 urlset을 받도록 유지.
+  return buildUrlSet([]);
 }
 
 export async function renderPostsSitemap(env: Env, site: Site, n: number): Promise<string | null> {
