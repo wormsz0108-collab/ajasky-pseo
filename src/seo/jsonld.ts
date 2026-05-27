@@ -1,4 +1,5 @@
 import type { Site, Board, Post } from '../types';
+import { absoluteImageUrl } from '../lib/url';
 
 function orgNode(site: Site) {
   const base = `https://${site.domain}`;
@@ -89,7 +90,7 @@ export function buildArticleJsonLd(input: BuildArticleLdInput) {
   const { site, board, post, faq } = input;
   const base = `https://${site.domain}`;
   const url = `${base}/${encodeURIComponent(board.slug)}/${encodeURIComponent(post.slug)}`;
-  const img = post.og_image_url || site.og_image_url || `${base}/og-default.jpg`;
+  const img = absoluteImageUrl(post.og_image_url || site.og_image_url || `${base}/og-default.jpg`, site.domain);
 
   const graph: object[] = [
     websiteNode(site),

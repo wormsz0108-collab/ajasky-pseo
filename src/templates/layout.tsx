@@ -1,6 +1,7 @@
 import { html } from 'hono/html';
 import type { Site, Board } from '../types';
 import { STYLES } from './styles';
+import { absoluteImageUrl } from '../lib/url';
 
 interface LayoutProps {
   site: Site;
@@ -30,7 +31,10 @@ export function Layout(props: LayoutProps) {
   } = props;
 
   const fullUrl = `https://${site.domain}${canonicalPath}`;
-  const ogImg = ogImageUrl || site.og_image_url || `https://${site.domain}/og-default.jpg`;
+  const ogImg = absoluteImageUrl(
+    ogImageUrl || site.og_image_url || `https://${site.domain}/og-default.jpg`,
+    site.domain,
+  );
   const phoneHref = `tel:${site.phone.replace(/-/g, '')}`;
 
   return html`<!doctype html>
