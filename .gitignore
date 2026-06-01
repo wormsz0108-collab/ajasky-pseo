@@ -9,5 +9,7 @@ dist/
 .DS_Store
 __pycache__/
 *.pyc
+# Claude Code 런타임 파일 (작업용 락 등)
+.claude/
 # 시안용 mockup, GitHub Actions 환경엔 필요 없음 (개발자만 사용)
 # mockup/
