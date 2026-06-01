@@ -1,0 +1,89 @@
+name: Daily Publish (wormsz1.store)
+
+# wormsz1.store 발행 워크플로. ajasky.co.kr 용 publish.yml 과 동일 구조,
+# SITE_DOMAIN / WORKER_API 만 wormsz1.store 로 교체.
+# 도메인별 네이버 색인 한도(50/일)가 따로라 ajasky 와 합쳐 총 100/일.
+#
+# cron 분(分)은 publish.yml(ajasky)과 겹치지 않게 어긋나게 배치 — 두 워크플로가
+# 같은 순간에 Gemini를 동시에 때려 rate limit 걸리는 걸 피하기 위함.
+# concurrency group 도 분리해 ajasky 발행과 서로 막지 않도록 함.
+
+on:
+  schedule:
+    - cron: "21 0 * * *"     # KST 09:21
+    - cron: "19 1 * * *"     # KST 10:19
+    - cron: "17 2 * * *"     # KST 11:17
+    - cron: "15 3 * * *"     # KST 12:15
+    - cron: "13 4 * * *"     # KST 13:13
+    - cron: "11 5 * * *"     # KST 14:11
+    - cron: "9 6 * * *"      # KST 15:09
+    - cron: "7 7 * * *"      # KST 16:07
+    - cron: "5 8 * * *"      # KST 17:05
+    - cron: "3 9 * * *"      # KST 18:03
+    - cron: "1 10 * * *"     # KST 19:01
+    - cron: "59 10 * * *"    # KST 19:59
+    - cron: "57 11 * * *"    # KST 20:57
+    - cron: "55 12 * * *"    # KST 21:55
+    - cron: "53 13 * * *"    # KST 22:53
+    - cron: "51 14 * * *"    # KST 23:51
+    - cron: "49 15 * * *"    # KST 00:49
+    - cron: "47 16 * * *"    # KST 01:47
+    - cron: "45 17 * * *"    # KST 02:45
+    - cron: "43 18 * * *"    # KST 03:43
+    - cron: "41 19 * * *"    # KST 04:41
+    - cron: "39 20 * * *"    # KST 05:39
+    - cron: "37 21 * * *"    # KST 06:37
+    - cron: "35 22 * * *"    # KST 07:35
+    - cron: "33 23 * * *"    # KST 08:33
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: "강제 발행 (확률 무시)"
+        type: boolean
+        default: true
+      batch_size:
+        description: "한 번에 발행할 글 수"
+        type: string
+        default: "2"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-wormsz1
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: content-pipeline/requirements.txt
+
+      - name: Install Noto CJK font (for OG image text overlay)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+
+      - name: Install Python deps
+        run: pip install -r content-pipeline/requirements.txt
+
+      - name: Run publish cycle
+        env:
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+          WORKER_API_TOKEN:      ${{ secrets.WORKER_API_TOKEN }}
+          R2_ACCOUNT_ID:         ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID:      ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          WORKER_API:            https://wormsz1.store/api/posts
+          SITE_DOMAIN:           wormsz1.store
+          PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '1.0' }}
+          PUBLISH_BATCH_SIZE:    ${{ inputs.batch_size || '2' }}
+        run: python content-pipeline/run_once.py
