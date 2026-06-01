@@ -6,6 +6,13 @@
 from __future__ import annotations
 
 
+# 광주광역시 혼동 방지로 광역 토큰 없이 한 덩어리로 쓰는 시군구 (regions.py _disambiguate 와 동기).
+# "경기도광주" 채택: 네이버 실측 검색량 1위 (경기광주의 6배).
+_MERGED_CITIES = {"경기도광주"}
+# legacy 데이터 호환: 이미 "경기 광주시"로 저장된 글도 결합 표기로 정규화해 동일 키워드 산출.
+_PROVINCE_CITY_MERGE = {("경기", "광주시"): "경기도광주"}
+
+
 def _tokenize_region(region: str) -> dict[str, str]:
     """region 을 광역/시군구/동으로 분해.
 
@@ -15,8 +22,16 @@ def _tokenize_region(region: str) -> dict[str, str]:
       "서울"                  → {province: "서울", city: "",          dong: ""}
       "충북"                  → {province: "충북", city: "",          dong: ""}
       "경기 화성시 송동"      → {province: "경기", city: "화성시",  dong: "송동"}
+      "경기도광주"            → {province: "",     city: "경기도광주", dong: ""}
+      "경기도광주 경안동"     → {province: "",     city: "경기도광주", dong: "경안동"}
     """
     parts = region.split()
+    # 결합 표기 시군구(경기도광주 등)는 광역 토큰이 없음 — 첫 토큰이 곧 city.
+    if parts and parts[0] in _MERGED_CITIES:
+        return {"province": "", "city": parts[0], "dong": " ".join(parts[1:])}
+    # legacy "경기 광주시 ..." → 결합 표기(경기도광주)로 정규화.
+    if len(parts) >= 2 and (parts[0], parts[1]) in _PROVINCE_CITY_MERGE:
+        return {"province": "", "city": _PROVINCE_CITY_MERGE[(parts[0], parts[1])], "dong": " ".join(parts[2:])}
     if len(parts) >= 3:
         return {"province": parts[0], "city": parts[1], "dong": " ".join(parts[2:])}
     if len(parts) == 2:
@@ -120,8 +135,18 @@ def derive_keywords(region: str, board_title: str) -> list[str]:
         for m in mains:
             add(f"{prefix} {m}")
 
-    # 최대 20개로 자름 (스팸 위험 회피)
-    return kw[:20]
+    # 상업 의도 키워드: 견적·문의 (별도 보드가 없는 의도어 — 지역 + 스카이차 + 의도).
+    # 비용/가격/요금/이용료 는 각각 보드가 있어 자기 페이지끼리 경쟁 방지 위해 제외.
+    COMMERCIAL_INTENTS = ("견적", "문의")
+    intent_bases = [b for b in (dong_full, city_full) if b]
+    if not intent_bases and r["province"]:
+        intent_bases = [r["province"]]
+    for base in intent_bases:
+        for intent in COMMERCIAL_INTENTS:
+            add(f"{base} {main_full} {intent}")
+
+    # 스팸 회피 상한 (상업 의도어 포함 여유 위해 22)
+    return kw[:22]
 
 
 if __name__ == "__main__":
@@ -133,6 +158,9 @@ if __name__ == "__main__":
         ("충북", "스카이차"),
         ("인천 계양구 용종동", "고소작업차량"),
         ("충남 공주시 쌍신동", "스카이 작업차"),
+        ("경기도광주", "스카이차 비용"),
+        ("경기도광주 경안동", "스카이차"),
+        ("경기 광주시", "스카이차 비용"),  # legacy 입력도 경기도광주로 정규화돼야 함
     ]
     for region, board in cases:
         kws = derive_keywords(region, board)

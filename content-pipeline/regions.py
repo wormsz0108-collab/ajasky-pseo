@@ -56,6 +56,25 @@ REGIONS_BY_LEVEL = {
 }
 
 
+def _disambiguate(label: str) -> str:
+    """광주광역시 ↔ 경기 광주시 혼동 방지 (사장님 정책).
+
+    경기도 광주시는 단독 "광주"/"광주시"로 쓰면 광주광역시와 헷갈리므로
+    항상 "경기도광주" 한 덩어리로 표기한다. (광주광역시는 "광주 ..." 그대로 둠.)
+    "경기도광주" 채택 근거: 네이버 실측 월간검색량 1위 — 지역단독 19,870,
+    "경기도광주 스카이차" 1,080 (cf. "경기광주" 10,170 / 180).
+
+      "경기 광주시"          → "경기도광주"
+      "경기 광주시 경안동"   → "경기도광주 경안동"
+    """
+    if label == "경기 광주시":
+        return "경기도광주"
+    prefix = "경기 광주시 "
+    if label.startswith(prefix):
+        return "경기도광주 " + label[len(prefix):]
+    return label
+
+
 def all_region_targets():
     """발행 대상 지역. (region_label, region_type) 리스트.
 
@@ -105,4 +124,5 @@ def all_region_targets():
     except ImportError:
         pass  # PDF 추출 안 됐을 때 안전 fallback
 
-    return out
+    # 경기 광주시 → "경기도광주" 로 통일 (광주광역시 혼동 방지)
+    return [(_disambiguate(label), rtype) for (label, rtype) in out]
