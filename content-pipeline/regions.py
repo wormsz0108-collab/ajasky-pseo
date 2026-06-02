@@ -78,20 +78,18 @@ def _disambiguate(label: str) -> str:
 def all_region_targets():
     """발행 대상 지역. (region_label, region_type) 리스트.
 
-    사장님 실 서비스 권역 한정 (2026-05-18 축소):
-      광역 전체:  서울, 경기, 인천
-      충남 일부:  천안시, 아산시 만
-      (세종·대전·충북·충남나머지 제외 — 출장 권역 밖)
+    서비스 권역 (2026-06 확장 — 충청권 전역 추가):
+      서울·경기·인천 전역 + 대전·세종 + 충북·충남 전역.
+      (경기 작업권 제한은 네이버 블로그 키워드 자료용이지 이 사이트 발행과 무관.)
 
     3단계 레벨 모두 포함:
-      광역    (서울, 경기, 인천)            ← 3개
-      시군구  (서울 강남구, 경기 수원시 ...)  ← ~68개
-      법정동  (서울 강남구 청담동 ...)         ← 권역 내 동/읍/면만
+      광역    (서울, 경기, 인천, 대전, 세종, 충북, 충남)
+      시군구  (서울 강남구, 충북 제천시 ...)
+      법정동  (서울 강남구 청담동 ...)  ← region_dongs.py 추출분.
+              동단위: 대전·충남 전역 OK. 충북은 청주·충주만, 세종은 동데이터 없음
+              → 나머지는 시·군 단위 키워드만 (PDF 재추출 시 채워짐).
     """
-    # 경기는 전역 발행 (작업권 제한 없음 — 그 제한은 네이버 블로그 키워드 자료용이지
-    # 이 pSEO 사이트 발행 대상이 아님). 서울·경기·인천 전체 + 충남 천안·아산.
-    INCLUDE_FULL_REGIONS = {"서울", "경기", "인천"}
-    INCLUDE_CHUNGNAM_CITIES = {"천안시", "아산시"}
+    INCLUDE_FULL_REGIONS = {"서울", "경기", "인천", "대전", "세종", "충북", "충남"}
 
     out = []
 
@@ -105,10 +103,6 @@ def all_region_targets():
         if parent in INCLUDE_FULL_REGIONS:
             for c in children:
                 out.append((f"{parent} {c}", "시군구"))
-        elif parent == "충남":
-            for c in children:
-                if c in INCLUDE_CHUNGNAM_CITIES:
-                    out.append((f"{parent} {c}", "시군구"))
 
     # 3) 법정동 (PDF 추출, region_dongs.py)
     #    세분화 동(소사본동/상도1동/성수1가 등)은 대표 동으로 정규화 후 dedupe.
@@ -120,11 +114,6 @@ def all_region_targets():
                 for city, dongs in cities.items():
                     for dong in normalize_city_dongs(dongs):
                         out.append((f"{parent_label} {city} {dong}", "법정동"))
-            elif parent_label == "충남":
-                for city, dongs in cities.items():
-                    if city in INCLUDE_CHUNGNAM_CITIES:
-                        for dong in normalize_city_dongs(dongs):
-                            out.append((f"{parent_label} {city} {dong}", "법정동"))
     except ImportError:
         pass  # PDF 추출 안 됐을 때 안전 fallback
 
