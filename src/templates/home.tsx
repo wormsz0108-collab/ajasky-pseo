@@ -90,6 +90,7 @@ export function HomePage(props: HomePageProps) {
     ogType: 'website',
     keywords: `${site.site_name},스카이차,스카이차 비용,스카이차 일대,고소작업차량,스카이차 가격,스카이차 요금,스카이차 이용료,스카이 작업차,${site.phone}`,
     jsonLd,
+    noindex: true,  // 홈도 검색 노출 제외 — 글(알맹이)만 색인 (사장님 방침)
     children: inner,
   });
 }
