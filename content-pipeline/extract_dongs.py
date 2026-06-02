@@ -2,14 +2,15 @@
 
 일회성 스크립트. 사장님 PC 로컬에서 실행.
 
-⚠️ 실행 순서: 이 스크립트는 region_dongs.py 를 통째로 덮어쓴다. 충북 전역·세종
-   동데이터는 행정동 txt 로 보강한 것이므로, 이 스크립트를 재실행하면
-   반드시 그 뒤에 `python merge_admin_dongs.py` 를 다시 돌려 보강분을 복원할 것.
+⚠️ 실행 순서: 이 스크립트는 region_dongs.py 를 통째로 덮어쓴다. 세종은 법정동 PDF가
+   파싱되지 않아 행정동 txt 로 보강하므로, 재실행 후 반드시
+   `python merge_admin_dongs.py` 를 돌려 세종 데이터를 복원할 것.
+   (충북은 이제 PDF에서 직접 추출되지만 merge 도 동일 결과로 재설정함.)
 
 사용법:
     cd content-pipeline
     python extract_dongs.py
-    python merge_admin_dongs.py   # 충북 전역 + 세종 보강 (필수)
+    python merge_admin_dongs.py   # 세종 보강 (필수) + 충북 재확정
 """
 from __future__ import annotations
 
@@ -30,7 +31,7 @@ TARGET = {
     "세종특별자치시": {"all": True, "label": "세종"},
     "대전광역시":   {"all": True,  "label": "대전"},
     "충청남도":     {"all": True,  "label": "충남"},
-    "충청북도":     {"all": False, "label": "충북", "cities": {"청주시", "충주시"}},
+    "충청북도":     {"all": True,  "label": "충북"},
 }
 
 
