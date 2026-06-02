@@ -41,6 +41,14 @@ export function PostPage(props: PostPageProps) {
   const phoneHref = `tel:${site.phone.replace(/-/g, '')}`;
   const canonicalPath = `/${encodeURIComponent(board.slug)}/${encodeURIComponent(post.slug)}`;
 
+  // 섹션 번호는 실제로 렌더되는 섹션만 세어 연속되게 매김.
+  // (옵션 섹션이 비면 번호가 건너뛰던 버그 수정 — 예: 10→12)
+  let secNum = sections.length;
+  const faqNum = pad(++secNum);
+  const sameBoardNum = sameBoardPosts.length > 0 ? pad(++secNum) : '';
+  const regionsNum = regionChips.length > 0 ? pad(++secNum) : '';
+  const relatedNum = relatedBoards.length > 0 ? pad(++secNum) : '';
+
   const inner = html`
     <article class="wrap">
 
@@ -107,7 +115,7 @@ export function PostPage(props: PostPageProps) {
       `)}
 
       <section id="faq">
-        <h2><span class="num">${pad(sections.length + 1)}</span>자주 묻는 질문</h2>
+        <h2><span class="num">${faqNum}</span>자주 묻는 질문</h2>
         <div class="faq">
           ${faq.map(f => html`
             <div class="faq-item">
@@ -120,7 +128,7 @@ export function PostPage(props: PostPageProps) {
 
       ${sameBoardPosts.length > 0 ? html`
         <section id="same-board">
-          <h2><span class="num">${pad(sections.length + 2)}</span>${board.title} 다른 안내</h2>
+          <h2><span class="num">${sameBoardNum}</span>${board.title} 다른 안내</h2>
           <p>같은 분야 다른 지역 글도 함께 살펴보세요.</p>
           <ul class="related-list">
             ${sameBoardPosts.map(p => html`
@@ -135,7 +143,7 @@ export function PostPage(props: PostPageProps) {
 
       ${regionChips.length > 0 ? html`
         <section id="regions">
-          <h2><span class="num">${pad(sections.length + 3)}</span>서비스 지역</h2>
+          <h2><span class="num">${regionsNum}</span>서비스 지역</h2>
           <p>${post.region} 인근 지역도 출장 상담 가능합니다.</p>
           <div class="region-list">
             ${regionChips.map(c => html`<a href="${c.href}">${c.name}</a>`)}
@@ -145,7 +153,7 @@ export function PostPage(props: PostPageProps) {
 
       ${relatedBoards.length > 0 ? html`
         <section id="related">
-          <h2><span class="num">${pad(sections.length + 4)}</span>다른 안내 둘러보기</h2>
+          <h2><span class="num">${relatedNum}</span>다른 안내 둘러보기</h2>
           <p>다른 분야 안내도 함께 살펴보세요.</p>
           <div class="region-list">
             ${relatedBoards.map(b => html`<a href="/${encodeURIComponent(b.slug)}">${b.title}</a>`)}

@@ -6,12 +6,16 @@
 //   1. 번호 리스트
 //   - 불릿 리스트
 //
-// 굵게/기울임/링크는 사용 안 함 (프롬프트 자체에서 제외)
+// 인라인은 **굵게**만 지원 (Gemini 출력에 종종 포함). 기울임/링크는 미지원.
 
 import type { RenderedSection } from '../templates/post';
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// 이스케이프 후 인라인 강조(**굵게**) 변환. 별표는 escape 영향 없음.
+const inline = (s: string) =>
+  escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
 interface Block {
   headLine: string;
@@ -57,7 +61,7 @@ function renderBlock(md: string): string {
   const flushPara = () => {
     if (paraBuf.length === 0) return;
     const text = paraBuf.join(' ').trim();
-    if (text) out.push(`<p>${escapeHtml(text)}</p>`);
+    if (text) out.push(`<p>${inline(text)}</p>`);
     paraBuf = [];
   };
   const closeList = () => {
@@ -72,15 +76,15 @@ function renderBlock(md: string): string {
 
     if (h3) {
       flushPara(); closeList();
-      out.push(`<h3>${escapeHtml(h3[1].trim())}</h3>`);
+      out.push(`<h3>${inline(h3[1].trim())}</h3>`);
     } else if (ol) {
       flushPara();
       if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
-      out.push(`<li>${escapeHtml(ol[1].trim())}</li>`);
+      out.push(`<li>${inline(ol[1].trim())}</li>`);
     } else if (ul) {
       flushPara();
       if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; }
-      out.push(`<li>${escapeHtml(ul[1].trim())}</li>`);
+      out.push(`<li>${inline(ul[1].trim())}</li>`);
     } else if (line.trim() === '') {
       flushPara(); closeList();
     } else {
