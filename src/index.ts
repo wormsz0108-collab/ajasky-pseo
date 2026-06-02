@@ -9,6 +9,7 @@ import {
 } from './seo/sitemap';
 import { renderRobots } from './seo/robots';
 import { renderRss } from './seo/rss';
+import { FAVICON_PNG } from './favicon';
 import { buildThumbnailText } from './lib/thumbnail-text';
 import { parseBodyMarkdown } from './lib/markdown';
 import { pickBodyPhotos } from './lib/body-photos';
@@ -85,6 +86,13 @@ app.get('/media/:key{.+}', async (c) => {
   headers.set('etag', obj.httpEtag);
   return new Response(obj.body, { headers });
 });
+
+// 파비콘 (Worker 내장 — 전 도메인 공통). /favicon.ico, /favicon.png 모두 PNG로 서빙.
+const faviconResponse = () => new Response(FAVICON_PNG, {
+  headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=2592000, immutable' },
+});
+app.get('/favicon.ico', () => faviconResponse());
+app.get('/favicon.png', () => faviconResponse());
 
 // 홈
 app.get('/', async (c) => {
