@@ -17,6 +17,24 @@ api.use('*', async (c, next) => {
 
 api.get('/ping', (c) => c.json({ ok: true }));
 
+// 커버리지 우선 발행용 — 사이트별 지역(region)당 발행 글 수.
+// 봇이 글 수가 가장 적은 지역부터 뽑아 모든 지역을 고르게 채우는 데 사용.
+api.get('/region-counts', async (c) => {
+  const domain = c.req.query('site_domain');
+  if (!domain) return c.json({ error: 'missing_site_domain' }, 400);
+  const site = await c.env.DB.prepare('SELECT id FROM sites WHERE domain = ?')
+    .bind(domain).first<{ id: number }>();
+  if (!site) return c.json({ error: 'site_not_found', detail: domain }, 404);
+  const { results } = await c.env.DB.prepare(
+    `SELECT region, COUNT(*) as cnt FROM posts
+     WHERE site_id = ? AND status = 'published'
+     GROUP BY region`
+  ).bind(site.id).all<{ region: string; cnt: number }>();
+  const counts: Record<string, number> = {};
+  for (const r of results) counts[r.region] = r.cnt;
+  return c.json({ counts });
+});
+
 interface PostInput {
   site_domain: string;
   board_slug: string;

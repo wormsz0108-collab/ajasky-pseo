@@ -60,8 +60,49 @@ BOARDS = [
 ]
 
 
+_REGION_COUNTS = None
+
+
+def _fetch_region_counts() -> dict:
+    """Worker 에서 사이트별 지역(region)당 글 수 조회.
+
+    실패 시 {} 반환 → 모든 지역 동률(0)로 취급돼 자연스럽게 순수 랜덤으로 degrade.
+    """
+    base = os.environ.get("WORKER_API", "https://ajasky.co.kr/api/posts").rsplit("/", 1)[0]
+    token = os.environ.get("WORKER_API_TOKEN")
+    try:
+        r = _requests.get(
+            f"{base}/region-counts",
+            params={"site_domain": SITE_DOMAIN},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        return r.json().get("counts", {}) or {}
+    except Exception as e:
+        print(f"[warn] region-counts 조회 실패 ({e}) → 균등 랜덤으로 진행", file=sys.stderr)
+        return {}
+
+
+def _region_counts() -> dict:
+    """프로세스 1회 캐시 (한 cron run 동안 재사용; 발행 성공 시 로컬 증가)."""
+    global _REGION_COUNTS
+    if _REGION_COUNTS is None:
+        _REGION_COUNTS = _fetch_region_counts()
+    return _REGION_COUNTS
+
+
 def pick_target():
-    region, region_type = random.choice(all_region_targets())
+    """커버리지 우선: 글 수가 가장 적은 지역부터 뽑아 모든 지역을 고르게 채운다.
+
+    같은 최소 구간 안에서는 랜덤 (네이버 패턴 회피). 보드·longtail 은 그대로 랜덤.
+    counts 가 비면(조회 실패) 전부 0 동률 → 기존처럼 순수 랜덤.
+    """
+    targets = all_region_targets()
+    counts = _region_counts()
+    least = min(counts.get(r, 0) for r, _ in targets)
+    pool = [(r, t) for r, t in targets if counts.get(r, 0) == least]
+    region, region_type = random.choice(pool)
     board_slug, board_title = random.choice(BOARDS)
     longtail = random.choice(get_longtails(board_title))
     return region, region_type, board_slug, board_title, longtail
@@ -272,6 +313,8 @@ def publish_one(idx: int = 0, max_retries: int = 5) -> bool:
             continue
 
         print(f"[#{idx}] published id={result.get('id')}")
+        # 로컬 카운트 증가 → 같은 run 안에서 같은 지역 재선택 방지, 커버리지 진행.
+        _region_counts()[region] = _region_counts().get(region, 0) + 1
         return True
 
     print(f"[#{idx}] all {max_retries} retries failed", file=sys.stderr)
