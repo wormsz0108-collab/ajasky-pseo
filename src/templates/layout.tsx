@@ -1,4 +1,4 @@
-import { html } from 'hono/html';
+import { html, raw } from 'hono/html';
 import type { Site, Board } from '../types';
 import { STYLES } from './styles';
 import { absoluteImageUrl } from '../lib/url';
@@ -80,7 +80,11 @@ ${site.google_verification ? html`<meta name="google-site-verification" content=
 
 <style>${STYLES}</style>
 
-${jsonLd ? html`<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>` : ''}
+${jsonLd ? html`<script type="application/ld+json">${raw(
+  // raw 로 출력해 따옴표가 &quot; 로 깨지지 않게(이스케이프되면 JSON-LD 무효).
+  // 단 콘텐츠의 </script> 주입 방지 위해 < > & 를 유니코드 이스케이프(유효 JSON 유지).
+  JSON.stringify(jsonLd).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
+)}</script>` : ''}
 </head>
 <body>
 
