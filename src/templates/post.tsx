@@ -41,10 +41,25 @@ export function PostPage(props: PostPageProps) {
   const phoneHref = `tel:${site.phone.replace(/-/g, '')}`;
   const canonicalPath = `/${encodeURIComponent(board.slug)}/${encodeURIComponent(post.slug)}`;
 
+  // 본문에 FAQ 동의어 섹션(궁금증 정리 등)이 있으면 그 자리에 실제 Q&A를 넣고
+  // 하단 중복 FAQ 섹션은 생략 — '빈 FAQ 섹션' 문제 해결.
+  const FAQ_TITLE_RE = /자주\s*(?:묻는|받는|받|묻)|궁금증|Q\s*&\s*A|흔한\s*질문|흔히\s*받는|현장\s*자주/;
+  const faqHostIdx = faq.length > 0 ? sections.findIndex(s => FAQ_TITLE_RE.test(s.title)) : -1;
+  const hasStandaloneFaq = faqHostIdx === -1 && faq.length > 0;
+
+  const faqItems = html`<div class="faq">
+    ${faq.map(f => html`
+      <div class="faq-item">
+        <p class="faq-q"><span class="qmark">Q.</span>${f.q}</p>
+        <p class="faq-a">${f.a}</p>
+      </div>
+    `)}
+  </div>`;
+
   // 섹션 번호는 실제로 렌더되는 섹션만 세어 연속되게 매김.
   // (옵션 섹션이 비면 번호가 건너뛰던 버그 수정 — 예: 10→12)
   let secNum = sections.length;
-  const faqNum = pad(++secNum);
+  const faqNum = hasStandaloneFaq ? pad(++secNum) : '';
   const sameBoardNum = sameBoardPosts.length > 0 ? pad(++secNum) : '';
   const regionsNum = regionChips.length > 0 ? pad(++secNum) : '';
   const relatedNum = relatedBoards.length > 0 ? pad(++secNum) : '';
@@ -100,6 +115,7 @@ export function PostPage(props: PostPageProps) {
         <section id="${s.anchor}">
           <h2><span class="num">${s.num}</span>${s.title}</h2>
           ${raw(s.bodyHtml)}
+          ${i === faqHostIdx ? faqItems : ''}
           ${[1, 3, 5].includes(i) ? Thumbnail({
             // 본문 3장 모두 브랜디드 — 같은 디자인/텍스트, 배경 사진만 변형 (body1/body2/body3).
             // R2 키: og/body{N}-{slug}.jpg. backfill_body_og.py 가 사전 생성.
@@ -114,17 +130,12 @@ export function PostPage(props: PostPageProps) {
         </section>
       `)}
 
+      ${hasStandaloneFaq ? html`
       <section id="faq">
         <h2><span class="num">${faqNum}</span>자주 묻는 질문</h2>
-        <div class="faq">
-          ${faq.map(f => html`
-            <div class="faq-item">
-              <p class="faq-q"><span class="qmark">Q.</span>${f.q}</p>
-              <p class="faq-a">${f.a}</p>
-            </div>
-          `)}
-        </div>
+        ${faqItems}
       </section>
+      ` : ''}
 
       ${sameBoardPosts.length > 0 ? html`
         <section id="same-board">

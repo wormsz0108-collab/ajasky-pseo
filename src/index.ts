@@ -15,7 +15,7 @@ import { parseBodyMarkdown } from './lib/markdown';
 import { pickBodyPhotos } from './lib/body-photos';
 import { NotFoundPage } from './templates/notfound';
 import apiRoutes from './routes/api';
-import { nearbyRegions } from './lib/regions';
+import { cityOf } from './lib/regions';
 import {
   buildDummyPost, buildDummySections, buildDummyFaq,
 } from './lib/dummy';
@@ -194,13 +194,15 @@ app.get('/:boardSlug/:postSlug', async (c) => {
     `SELECT * FROM posts WHERE site_id = ? AND board_id = ? AND slug = ? AND status = 'published'`
   ).bind(site.id, board.id, postSlug).first<Post>();
 
-  // 같은 보드 다른 글 (클러스터 시그널) — 7개 랜덤. 현재 글 제외.
-  const sameBoardRows = await c.env.DB.prepare(
+  // 같은 보드 다른 글 풀 — 한 번에 60개 랜덤. 현재 글 제외.
+  // 7개는 "같은 보드 다른 안내"(클러스터), 나머지는 "서비스 지역" 칩의 실제 내부링크 소스로 재사용.
+  const poolRows = await c.env.DB.prepare(
     `SELECT slug, title, region FROM posts
      WHERE site_id = ? AND board_id = ? AND status = 'published' AND slug != ?
-     ORDER BY RANDOM() LIMIT 7`
+     ORDER BY RANDOM() LIMIT 60`
   ).bind(site.id, board.id, postSlug).all<{ slug: string; title: string; region: string }>();
-  const sameBoardPosts = sameBoardRows.results;
+  const pool = poolRows.results;
+  const sameBoardPosts = pool.slice(0, 7);
 
   if (!post) {
     // DB에 없는 slug = 404. 시안용 dummy fallback 제거 (publish 파이프라인의 사전 체크가 이걸 의존).
@@ -217,6 +219,7 @@ app.get('/:boardSlug/:postSlug', async (c) => {
     sections,
     faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
     sameBoardPosts,
+    pool,
   });
 });
 
@@ -225,14 +228,25 @@ function renderPost(opts: {
   post: Post; sections: ReturnType<typeof buildDummySections>;
   faq: { q: string; a: string }[];
   sameBoardPosts: { slug: string; title: string; region: string }[];
+  pool: { slug: string; title: string; region: string }[];
 }) {
-  const { site, boards, board, post, sections, faq, sameBoardPosts } = opts;
+  const { site, boards, board, post, sections, faq, sameBoardPosts, pool } = opts;
   const jsonLd = buildArticleJsonLd({ site, board, post, faq });
 
-  const regionChips = nearbyRegions(post.region).map(name => ({
-    name,
-    href: `/${encodeURIComponent(board.slug)}`,
-  }));
+  // "서비스 지역" 칩 = 같은 보드의 실제 인근 지역 글로 내부링크 (시군구 1개당 1글, 최대 24).
+  // 기존엔 50개가 전부 보드 목록으로 링크 → 색인/내부링크 시그널 약했음.
+  const seenCity = new Set<string>([cityOf(post.region)]);
+  const regionChips: { name: string; href: string }[] = [];
+  for (const r of pool) {
+    const city = cityOf(r.region);
+    if (!city || seenCity.has(city)) continue;
+    seenCity.add(city);
+    regionChips.push({
+      name: city,
+      href: `/${encodeURIComponent(board.slug)}/${encodeURIComponent(r.slug)}`,
+    });
+    if (regionChips.length >= 24) break;
+  }
 
   const bodyPhotos = pickBodyPhotos(post.slug, post.region, board.title);
   const relatedBoards = boards.filter(b => b.slug !== board.slug);

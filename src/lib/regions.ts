@@ -28,6 +28,18 @@ export const REGION_NEIGHBORS: Record<string, string[]> = {
   '세종특별자치시': ['세종시'],
 };
 
+// region 문자열에서 시군구 토큰 추출. 내부링크 칩 라벨용.
+//   "경기 수원시 남수동" → "수원시"
+//   "경기 양주시"        → "양주시"
+//   "서울 용산구 이태원동" → "용산구"
+//   "경기도광주 곤지암읍" → "경기도광주"  (결합 표기는 첫 토큰)
+//   "충북"               → "충북"        (광역만 있으면 그대로)
+export function cityOf(region: string): string {
+  const parts = region.trim().split(/\s+/);
+  if (parts[0] === '경기도광주') return '경기도광주';
+  return parts[1] || parts[0] || '';
+}
+
 // 글 region 인근 시군구 전체 반환 (max 미지정 시 전부).
 // 경쟁사 100개+ 내부 링크 대비 → 광역의 전 시군구 노출이 D.I.A. 내부 링크 시그널에 유리.
 // region 이 "경기" 같은 광역이면 산하 전부, "경기 수원시" 같은 시군구면 같은 광역 산하 전부 반환.
