@@ -2,9 +2,14 @@
 
 일회성 스크립트. 사장님 PC 로컬에서 실행.
 
+⚠️ 실행 순서: 이 스크립트는 region_dongs.py 를 통째로 덮어쓴다. 충북 전역·세종
+   동데이터는 행정동 txt 로 보강한 것이므로, 이 스크립트를 재실행하면
+   반드시 그 뒤에 `python merge_admin_dongs.py` 를 다시 돌려 보강분을 복원할 것.
+
 사용법:
     cd content-pipeline
     python extract_dongs.py
+    python merge_admin_dongs.py   # 충북 전역 + 세종 보강 (필수)
 """
 from __future__ import annotations
 
