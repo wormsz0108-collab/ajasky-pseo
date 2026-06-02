@@ -109,11 +109,17 @@ def derive_keywords(region: str, board_title: str) -> list[str]:
     city_variants = [c for c in (city_full, city_short) if c]
     dong_variants = [d for d in (dong_full, dong_short) if d]
 
+    # 모동(母洞): 동 어간 == 시군구 어간 이면 (구로구 구로동, 가평군 가평읍 등)
+    # 결합이 "구로 구로"/"가평 가평" 처럼 중복·스팸이 되므로 결합을 생략하고
+    # 동 단독("구로동", "가평읍")으로만 쓴다.
+    same_stem = bool(city_full and dong_full and _strip(city_full) == _strip(dong_full))
+
     prefixes: list[str] = []
-    # city+dong 결합 (가장 long-tail)
-    for c in city_variants:
-        for d in dong_variants:
-            prefixes.append(f"{c} {d}")
+    # city+dong 결합 (가장 long-tail) — 모동이면 생략
+    if not same_stem:
+        for c in city_variants:
+            for d in dong_variants:
+                prefixes.append(f"{c} {d}")
     # dong 단독
     prefixes.extend(dong_variants)
     # city 단독
@@ -124,10 +130,12 @@ def derive_keywords(region: str, board_title: str) -> list[str]:
 
     # board_specific 가 있는 경우 (예: "스카이차 이용료") — 가장 구체적인 long-tail 1개 추가
     if board_specific and city_variants:
-        most_specific_prefix = (
-            f"{city_full} {dong_full}" if (city_full and dong_full)
-            else (city_full or dong_full)
-        )
+        if same_stem:
+            most_specific_prefix = dong_full or city_full   # "가평읍" (중복 "가평 가평" 회피)
+        elif city_full and dong_full:
+            most_specific_prefix = f"{city_full} {dong_full}"
+        else:
+            most_specific_prefix = city_full or dong_full
         add(f"{most_specific_prefix} {board_title}")
 
     # prefix × main 조합 (메인 풀/짧음 모두)

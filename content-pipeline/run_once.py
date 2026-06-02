@@ -216,7 +216,8 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
 
     # meta_keywords 는 Gemini 출력 무시하고 derive_keywords 로 통일.
     # 사용자가 "관악구스카이차" / "관악구 스카이차" / "서울 관악구 스카이차" 등
-    # 어떻게 쳐도 매칭되도록 자동 변형 생성. 스팸 회피: 최대 10개.
+    # 어떻게 쳐도 매칭되도록 자동 변형 생성. 상한 22개(derive_keywords 내부).
+    # 참고: <meta name="keywords">는 SEO 가중치가 거의 없어 개수는 큰 영향 없음.
     keywords = derive_keywords(region, board_title)
     meta_keywords = ",".join(keywords)
 

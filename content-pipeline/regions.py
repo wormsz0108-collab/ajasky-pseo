@@ -90,6 +90,12 @@ def all_region_targets():
     """
     INCLUDE_FULL_REGIONS = {"서울", "경기", "인천"}
     INCLUDE_CHUNGNAM_CITIES = {"천안시", "아산시"}
+    # 경기 작업권 밖 14곳 (거리 멀어 출장 권역 밖) — 제외.
+    # 잔류 경기 권역 = 서울 인접 남부. (사장님 정책 2026-05)
+    EXCLUDE_GYEONGGI_CITIES = {
+        "연천군", "의정부시", "포천시", "구리시", "남양주시", "양주시", "김포시",
+        "고양시", "파주시", "동두천시", "가평군", "여주시", "하남시", "양평군",
+    }
 
     out = []
 
@@ -102,6 +108,8 @@ def all_region_targets():
     for parent, children in REGIONS_BY_LEVEL["시군구"].items():
         if parent in INCLUDE_FULL_REGIONS:
             for c in children:
+                if parent == "경기" and c in EXCLUDE_GYEONGGI_CITIES:
+                    continue
                 out.append((f"{parent} {c}", "시군구"))
         elif parent == "충남":
             for c in children:
@@ -109,17 +117,21 @@ def all_region_targets():
                     out.append((f"{parent} {c}", "시군구"))
 
     # 3) 법정동 (PDF 추출, region_dongs.py)
+    #    세분화 동(소사본동/상도1동/성수1가 등)은 대표 동으로 정규화 후 dedupe.
     try:
         from region_dongs import REGION_DONGS
+        from dong_normalize import normalize_city_dongs
         for parent_label, cities in REGION_DONGS.items():
             if parent_label in INCLUDE_FULL_REGIONS:
                 for city, dongs in cities.items():
-                    for dong in dongs:
+                    if parent_label == "경기" and city in EXCLUDE_GYEONGGI_CITIES:
+                        continue
+                    for dong in normalize_city_dongs(dongs):
                         out.append((f"{parent_label} {city} {dong}", "법정동"))
             elif parent_label == "충남":
                 for city, dongs in cities.items():
                     if city in INCLUDE_CHUNGNAM_CITIES:
-                        for dong in dongs:
+                        for dong in normalize_city_dongs(dongs):
                             out.append((f"{parent_label} {city} {dong}", "법정동"))
     except ImportError:
         pass  # PDF 추출 안 됐을 때 안전 fallback

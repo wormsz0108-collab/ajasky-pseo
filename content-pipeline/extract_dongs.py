@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from dong_normalize import normalize_city_dongs
+
 SRC_ROOT = Path(r"C:/Users/worms/Desktop/법정동_통합정리_완료")
 OUT_PATH = Path(__file__).parent / "region_dongs.py"
 
@@ -61,6 +63,7 @@ def main():
             if not cfg["all"] and city not in cfg.get("cities", set()):
                 continue
             dongs = extract_dongs_from_pdf(pdf)
+            dongs = normalize_city_dongs(dongs)  # 세분화 동 → 대표 동 정규화 + dedupe
             if dongs:
                 result[label][city] = dongs
                 total += len(dongs)
