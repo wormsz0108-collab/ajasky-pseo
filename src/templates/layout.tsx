@@ -78,7 +78,7 @@ ${site.google_verification ? html`<meta name="google-site-verification" content=
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 
-<style>${STYLES}</style>
+<style>${raw(STYLES)}</style>
 
 ${jsonLd ? html`<script type="application/ld+json">${raw(
   // raw 로 출력해 따옴표가 &quot; 로 깨지지 않게(이스케이프되면 JSON-LD 무효).
