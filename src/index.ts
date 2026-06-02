@@ -183,6 +183,13 @@ app.get('/:boardSlug/:postSlug', async (c) => {
   const boardSlug = decodeURIComponent(c.req.param('boardSlug'));
   const postSlug = decodeURIComponent(c.req.param('postSlug'));
 
+  // 엣지 캐시: 글 페이지는 거의 안 바뀌므로 Cache API 로 1시간 캐시.
+  // (홈·보드는 새 글 즉시 반영 위해 캐시 안 함.) Host 가 URL에 포함돼 도메인별 분리됨.
+  const cache = caches.default;
+  const cacheKey = new Request(c.req.url, { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
   const board = await c.env.DB.prepare(
     'SELECT id, slug, title, description FROM boards WHERE site_id = ? AND slug = ?'
   ).bind(site.id, boardSlug).first<Board>();
@@ -214,13 +221,16 @@ app.get('/:boardSlug/:postSlug', async (c) => {
   if (sections.length < 3) {
     sections = buildDummySections(post.region, board.title);
   }
-  return renderPost({
+  const resp = renderPost({
     site, boards, board, post,
     sections,
     faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
     sameBoardPosts,
     pool,
   });
+  // 엣지 캐시에 저장 (응답 반환은 막지 않도록 waitUntil).
+  c.executionCtx.waitUntil(cache.put(cacheKey, resp.clone()));
+  return resp;
 });
 
 function renderPost(opts: {
@@ -262,7 +272,11 @@ function renderPost(opts: {
       sameBoardPosts,
       jsonLd,
     }).toString(),
-    { headers: { 'content-type': 'text/html; charset=utf-8' } }
+    { headers: {
+      'content-type': 'text/html; charset=utf-8',
+      // 브라우저 10분, 엣지(Cache API/CDN) 1시간. 글은 거의 안 바뀜.
+      'cache-control': 'public, max-age=600, s-maxage=3600',
+    } }
   );
 }
 
