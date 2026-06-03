@@ -1,6 +1,7 @@
 import { html, raw } from 'hono/html';
 import type { Site, Board } from '../types';
 import { STYLES } from './styles';
+import { pickTheme } from './theme';
 import { absoluteImageUrl } from '../lib/url';
 
 interface LayoutProps {
@@ -36,6 +37,7 @@ export function Layout(props: LayoutProps) {
     site.domain,
   );
   const phoneHref = `tel:${site.phone.replace(/-/g, '')}`;
+  const theme = pickTheme(site);
 
   return html`<!doctype html>
 <html lang="ko">
@@ -77,8 +79,11 @@ ${site.google_verification ? html`<meta name="google-site-verification" content=
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+${theme.fontHref ? html`<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="${theme.fontHref}">` : ''}
 
 <style>${raw(STYLES)}</style>
+<style>${raw(theme.css)}</style>
 
 ${jsonLd ? html`<script type="application/ld+json">${raw(
   // raw 로 출력해 따옴표가 &quot; 로 깨지지 않게(이스케이프되면 JSON-LD 무효).
