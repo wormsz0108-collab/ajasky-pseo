@@ -29,7 +29,7 @@ import requests
 # content-pipeline 가 같은 디렉터리에 있다고 가정
 sys.path.insert(0, str(Path(__file__).parent))
 
-from og_compose import compose_og
+from og_compose import compose_for_site
 from run_once import _split_board
 
 SITE = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
@@ -104,8 +104,8 @@ def backfill_one(post: dict) -> bool:
 
     try:
         ribbon, head_main = _split_board(board_title)
-        composed = compose_og(
-            src, ribbon=ribbon, headline_prefix=region, headline_main=head_main,
+        composed = compose_for_site(
+            SITE, src, ribbon=ribbon, headline_prefix=region, headline_main=head_main,
         )
     except Exception as e:
         print(f"  [fail] id={pid}: compose failed: {e}", file=sys.stderr)

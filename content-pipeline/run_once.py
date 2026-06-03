@@ -22,7 +22,7 @@ from generate import generate_post
 from image_pool import pick_photo_key
 from keyword_variants import derive_keywords
 from longtails import get_longtails, LONGTAILS_BY_BOARD
-from og_compose import compose_og
+from og_compose import compose_for_site
 from publish import publish, slugify_ko
 from r2_client import get_object, put_object
 from regions import all_region_targets
@@ -144,7 +144,8 @@ def build_og(slug: str, region: str, board_title: str) -> str:
 
     try:
         ribbon, head_main = _split_board(board_title)
-        composed = compose_og(
+        composed = compose_for_site(
+            SITE_DOMAIN,
             source_bytes,
             ribbon=ribbon,             # 항상 보드 카테고리. 지역명 fallback 금지.
             headline_prefix=region,    # 큰 글자 1줄 = 지역
@@ -230,7 +231,8 @@ def _build_body_og_variants(slug: str, region: str, board_title: str, hero_photo
         try:
             r = _requests.get(f"https://{site}/media/{photo_key}", timeout=30)
             r.raise_for_status()
-            composed = compose_og(
+            composed = compose_for_site(
+                site,
                 r.content,
                 ribbon=ribbon,
                 headline_prefix=region,

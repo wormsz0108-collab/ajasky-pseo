@@ -1,0 +1,67 @@
+name: Backfill OG (re-theme)
+
+# 도메인별 OG 디자인을 바꾼 뒤, 기존 글들의 OG(hero) + 본문 이미지(body1~3)를
+# 새 디자인으로 일괄 재합성한다. 수동 트리거 전용.
+#   - hero : backfill_og.py --all  (이미 합성된 글도 원본 사진으로 재합성)
+#   - body : backfill_body_og.py   (글마다 body1~3 재합성)
+# 재합성은 slug 로 원본 사진을 다시 찾아 그리므로 이중 오버레이가 생기지 않는다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_domain:
+        description: "대상 도메인 (sites.domain)"
+        type: string
+        default: "ajasky.co.kr"
+      include_body:
+        description: "본문 이미지(body1~3)도 재합성"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backfill-og-${{ inputs.site_domain }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: content-pipeline/requirements.txt
+
+      - name: Install Noto CJK font (for OG image text overlay)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+
+      - name: Install Python deps
+        run: pip install -r content-pipeline/requirements.txt
+
+      - name: Backfill hero OG (--all = 재합성)
+        env:
+          WORKER_API_TOKEN:      ${{ secrets.WORKER_API_TOKEN }}
+          R2_ACCOUNT_ID:         ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID:      ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          SITE_DOMAIN:           ${{ inputs.site_domain }}
+        run: python content-pipeline/backfill_og.py --all
+
+      - name: Backfill body OG (body1~3)
+        if: ${{ inputs.include_body == true }}
+        env:
+          WORKER_API_TOKEN:      ${{ secrets.WORKER_API_TOKEN }}
+          R2_ACCOUNT_ID:         ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID:      ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          SITE_DOMAIN:           ${{ inputs.site_domain }}
+        run: python content-pipeline/backfill_body_og.py

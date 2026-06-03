@@ -21,7 +21,7 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
-from og_compose import compose_og
+from og_compose import compose_for_site
 from run_once import _split_board
 
 SITE = os.environ.get("SITE_DOMAIN", "ajasky.co.kr")
@@ -125,8 +125,8 @@ def backfill_one(post: dict) -> int:
         variant = f"body{i}"
         try:
             src = fetch_source(photo_key)
-            composed = compose_og(
-                src, ribbon=ribbon, headline_prefix=region, headline_main=head_main,
+            composed = compose_for_site(
+                SITE, src, ribbon=ribbon, headline_prefix=region, headline_main=head_main,
             )
             upload_variant(slug, variant, composed)
             success += 1

@@ -80,7 +80,16 @@ def compose_og(
     tag: str = "24시 전국 배차 / 안전 책임 작업",
     brand_name: str = "아자스카이",
     phone: str = "010-9249-0510",
+    theme: Optional[dict] = None,  # theme.pick_og_theme(domain) 결과. None이면 기존 핑크.
 ) -> bytes:
+    # 도메인 테마 색 (없으면 기존 시그니처 = 노랑/핑크/검정)
+    t = theme or {}
+    c_side = t.get("side", COLOR_YELLOW)
+    c_ribbon = t.get("ribbon", COLOR_PINK)
+    c_underline = t.get("underline", COLOR_YELLOW)
+    c_bar = t.get("bar", COLOR_BLACK)
+    c_name = t.get("name", COLOR_YELLOW)
+    c_dot = t.get("dot", COLOR_PINK)
     # 1. 본 사진을 1080×1080으로 크롭/리사이즈 + 어둡게
     base = Image.open(BytesIO(source_image_bytes)).convert("RGB")
     base = _fit_center_crop(base, OUT_W, OUT_H)
@@ -91,8 +100,8 @@ def compose_og(
     canvas = base.copy()
     draw = ImageDraw.Draw(canvas)
 
-    # 2. 좌측 노란 세로 띠
-    draw.rectangle([0, 0, SIDE_WIDTH, OUT_H], fill=COLOR_YELLOW)
+    # 2. 좌측 세로 띠
+    draw.rectangle([0, 0, SIDE_WIDTH, OUT_H], fill=c_side)
 
     # 3. 핑크 리본 (좌상)
     if ribbon:
@@ -113,7 +122,7 @@ def compose_og(
         )
         draw.rectangle(
             [rx - pad_x, ry - pad_y, rx + rw + pad_x, ry + rh + pad_y],
-            fill=COLOR_PINK,
+            fill=c_ribbon,
         )
         draw.text((rx - bbox[0], ry - bbox[1]), ribbon, font=rfont, fill=COLOR_WHITE)
 
@@ -137,7 +146,7 @@ def compose_og(
     underline_h = int(mh * 0.45)
     draw.rectangle(
         [head_x - bbox[0] - 4, underline_y, head_x - bbox[0] + mw + 8, underline_y + underline_h],
-        fill=COLOR_YELLOW,
+        fill=c_underline,
     )
     _stroke_text(draw, (head_x, head_y), headline_main, mfont, COLOR_WHITE, COLOR_BLACK, 6)
 
@@ -147,7 +156,7 @@ def compose_og(
     skew = int(BAR_HEIGHT * 0.18)
     draw.polygon(
         [(0, bar_top + skew), (OUT_W, bar_top), (OUT_W, OUT_H), (0, OUT_H)],
-        fill=COLOR_BLACK,
+        fill=c_bar,
     )
 
     # 5-1) tag (회색)
@@ -177,6 +186,119 @@ def compose_og(
     draw.text((bx, by), phone, font=bfont, fill=COLOR_WHITE)
 
     # 6. JPEG bytes 반환
+    buf = BytesIO()
+    canvas.save(buf, format="JPEG", quality=88, optimize=True)
+    return buf.getvalue()
+
+
+def compose_for_site(
+    domain: str,
+    source_image_bytes: bytes,
+    *,
+    ribbon: str,
+    headline_prefix: str,
+    headline_main: str,
+    tag: str = "24시 전국 배차 / 안전 책임 작업",
+    brand_name: str = "아자스카이",
+    phone: str = "010-9249-0510",
+) -> bytes:
+    """도메인별 OG 합성 디스패처. theme.og_config(domain) 으로 레이아웃·색을 골라
+    hero/body 모든 호출이 같은 사이트 디자인을 쓰도록 한다."""
+    from theme import og_config  # 지연 import (순환 회피)
+
+    cfg = og_config(domain)
+    if cfg.get("layout") == "panel":
+        return compose_og_panel(
+            source_image_bytes, ribbon=ribbon, headline_prefix=headline_prefix,
+            headline_main=headline_main, tag=tag, brand_name=brand_name, phone=phone,
+            accent=cfg.get("accent", "#2563eb"),
+        )
+    return compose_og(
+        source_image_bytes, ribbon=ribbon, headline_prefix=headline_prefix,
+        headline_main=headline_main, tag=tag, brand_name=brand_name, phone=phone,
+        theme=cfg.get("theme"),
+    )
+
+
+def compose_og_panel(
+    source_image_bytes: bytes,
+    *,
+    ribbon: str,           # 좌상 배지 (보드: "이용료")
+    headline_prefix: str,  # 지역 ("고양시 가좌동")
+    headline_main: str,    # 메인 키워드 ("스카이차")
+    tag: str = "24시 전국 배차 / 안전 책임 작업",
+    brand_name: str = "아자스카이",
+    phone: str = "010-9249-0510",
+    accent: str = "#2563eb",  # 배지·밑줄·브랜드 강조색
+) -> bytes:
+    """하단 패널형 구성. 사진을 크게 살리고 하단 그라데이션 패널에 텍스트.
+    기존 시그니처(좌측 띠형)와 '같지만 다른' 레이아웃."""
+    base = Image.open(BytesIO(source_image_bytes)).convert("RGB")
+    base = _fit_center_crop(base, OUT_W, OUT_H)
+
+    # 하단으로 갈수록 짙어지는 검정 그라데이션 (위쪽 사진은 선명하게 유지)
+    grad = Image.new("L", (1, OUT_H), 0)
+    start = int(OUT_H * 0.46)
+    for y in range(start, OUT_H):
+        t = (y - start) / (OUT_H - start)
+        grad.putpixel((0, y), int(min(1.0, t * 1.15) * 232))
+    grad = grad.resize((OUT_W, OUT_H))
+    dark = Image.new("RGB", (OUT_W, OUT_H), (0, 0, 0))
+    canvas = Image.composite(dark, base, grad)
+    draw = ImageDraw.Draw(canvas)
+
+    mL = int(OUT_W * 0.07)  # 좌측 여백
+
+    # 1) 좌상 배지 (보드) — accent 박스 + 흰 글씨
+    if ribbon:
+        rfont = _find_font(int(OUT_W * 0.044))
+        rb = draw.textbbox((0, 0), ribbon, font=rfont)
+        rw, rh = rb[2] - rb[0], rb[3] - rb[1]
+        px, py = int(OUT_W * 0.032), int(OUT_W * 0.018)
+        bx0, by0 = mL, int(OUT_H * 0.06)
+        draw.rounded_rectangle(
+            [bx0, by0, bx0 + rw + px * 2, by0 + rh + py * 2],
+            radius=int(OUT_W * 0.012), fill=accent,
+        )
+        draw.text((bx0 + px - rb[0], by0 + py - rb[1]), ribbon, font=rfont, fill=COLOR_WHITE)
+
+    # 2) 하단 패널 텍스트 — 지역 → 키워드(밑줄) → 브랜드
+    avail = OUT_W - mL - int(OUT_W * 0.07)
+
+    # 지역 (중간 크기, 흰색)
+    pfont = _fit_font(headline_prefix, avail, int(OUT_W * 0.058), min_size=32)
+    pb = pfont.getbbox(headline_prefix)
+    # 키워드 (큰 글씨)
+    mfont = _fit_font(headline_main, avail, int(OUT_W * 0.135), min_size=60)
+    mb = mfont.getbbox(headline_main)
+    mh = mb[3] - mb[1]
+
+    # 브랜드 줄 폰트
+    bfont = _find_font(int(OUT_W * 0.038))
+    nb = draw.textbbox((0, 0), brand_name, font=bfont)
+    fb = draw.textbbox((0, 0), phone, font=bfont)
+
+    # 세로 배치: 아래에서부터 쌓기
+    brand_y = int(OUT_H * 0.90)
+    main_y = brand_y - int(mh * 1.18) - int(OUT_W * 0.05)
+    prefix_y = main_y - int((pb[3] - pb[1]) * 1.5)
+
+    # 지역
+    draw.text((mL, prefix_y), headline_prefix, font=pfont, fill="#e5e7eb")
+    # 키워드 + accent 밑줄
+    mw = mb[2] - mb[0]
+    uy = main_y + mh + int(OUT_W * 0.012)
+    draw.rectangle([mL, uy, mL + min(mw, avail), uy + int(OUT_W * 0.014)], fill=accent)
+    _stroke_text(draw, (mL - mb[0], main_y - mb[1]), headline_main, mfont, COLOR_WHITE, COLOR_BLACK, 4)
+    # 브랜드: 이름(accent) · 점 · 전화(흰)
+    draw.text((mL, brand_y), brand_name, font=bfont, fill=accent)
+    bx = mL + (nb[2] - nb[0]) + int(OUT_W * 0.025)
+    dot_r = int(OUT_W * 0.007)
+    cy = brand_y + (nb[3] - nb[1]) // 2
+    draw.ellipse([bx, cy - dot_r, bx + dot_r * 2, cy + dot_r], fill=accent)
+    bx += dot_r * 2 + int(OUT_W * 0.025)
+    draw.text((bx, brand_y), phone, font=bfont, fill=COLOR_WHITE)
+
     buf = BytesIO()
     canvas.save(buf, format="JPEG", quality=88, optimize=True)
     return buf.getvalue()

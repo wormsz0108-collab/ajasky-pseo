@@ -31,14 +31,14 @@ body{font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",
   },
 ];
 
-function hashStr(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
-  return h;
-}
+// 도메인별 명시적 테마 지정. 여기 적힌 도메인만 강제 배정하고, 나머지는 site.id 기준
+// 자동 배정(기존 배포 상태 그대로 유지). OG 이미지 색은 content-pipeline/theme.py 의
+// OG_THEME_OVERRIDES 와 인덱스를 맞춰야 웹·OG 가 일치한다.
+const THEME_OVERRIDES: Record<string, number> = {
+  'ajasky.co.kr': 1, // 블루 (OG도 블루로 재생성). wormsz1.store 등 나머지는 건드리지 않음.
+};
 
-// site.id 우선(분포 안정), 없으면 domain 해시. 같은 사이트 = 항상 같은 테마.
-export function pickTheme(site: { id?: number; domain: string }): Theme {
-  const key = site.id != null ? site.id : hashStr(site.domain);
-  return THEMES[key % THEMES.length];
+export function pickTheme(site: { id: number; domain: string }): Theme {
+  const idx = THEME_OVERRIDES[site.domain] ?? site.id % THEMES.length;
+  return THEMES[idx];
 }
