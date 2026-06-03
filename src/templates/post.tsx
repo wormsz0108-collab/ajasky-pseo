@@ -118,8 +118,9 @@ export function PostPage(props: PostPageProps) {
           ${i === faqHostIdx ? faqItems : ''}
           ${[1, 3, 5].includes(i) ? Thumbnail({
             // 본문 3장 모두 브랜디드 — 같은 디자인/텍스트, 배경 사진만 변형 (body1/body2/body3).
-            // R2 키: og/body{N}-{slug}.jpg. backfill_body_og.py 가 사전 생성.
-            imageUrl: `/media/og/body${(i + 1) / 2}-${post.slug}.jpg`,
+            // R2 키: og/s{site_id}/body{N}-{slug}.jpg (사이트별). 미생성분은 /media 가
+            // 옛 공유 키(og/body{N}-{slug}.jpg)로 폴백하므로 재합성 전에도 404 안 남.
+            imageUrl: `/media/og/s${site.id}/body${(i + 1) / 2}-${post.slug}.jpg`,
             ribbon: thumbnailText.ribbon,
             headlinePrefix: thumbnailText.headlinePrefix,
             headlineHighlight: thumbnailText.headlineHighlight,

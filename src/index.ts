@@ -78,7 +78,12 @@ app.get('/rss.xml', async (c) => {
 // R2 미디어 서빙 (커스텀 도메인 붙기 전까지 Worker 경유)
 app.get('/media/:key{.+}', async (c) => {
   const key = c.req.param('key');
-  const obj = await c.env.MEDIA.get(key);
+  let obj = await c.env.MEDIA.get(key);
+  if (!obj) {
+    // 사이트 네임스페이스(og/sN/…) 미재합성분은 옛 공유 키(og/…)로 폴백 → 마이그레이션 중 404 방지.
+    const m = key.match(/^og\/s\d+\/(.+)$/);
+    if (m) obj = await c.env.MEDIA.get(`og/${m[1]}`);
+  }
   if (!obj) return c.text('Not found', 404);
   const headers = new Headers();
   obj.writeHttpMetadata(headers);

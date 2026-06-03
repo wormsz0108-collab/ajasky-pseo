@@ -152,7 +152,11 @@ api.post('/og-upload', async (c) => {
   if (body.byteLength < 1000 || body.byteLength > 2_000_000) {
     return c.json({ error: 'invalid_size', size: body.byteLength }, 400);
   }
-  const key = variant ? `og/${variant}-${slug}.jpg` : `og/${slug}.jpg`;
+  // 사이트별 네임스페이스(og/s{site_id}/…) — 같은 slug 라도 도메인마다 다른 OG 파일.
+  // 이전엔 og/{slug}.jpg 공유라 한 사이트 재합성이 같은 slug 가진 다른 사이트까지 덮었음.
+  const site = c.get('site');
+  const base = variant ? `${variant}-${slug}` : slug;
+  const key = `og/s${site.id}/${base}.jpg`;
   await c.env.MEDIA.put(key, body, {
     httpMetadata: {
       contentType: 'image/jpeg',
@@ -169,9 +173,11 @@ api.get('/posts/list', async (c) => {
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '20', 10)));
   const offset = Math.max(0, parseInt(c.req.query('offset') ?? '0', 10));
 
+  // 요청 Host 의 사이트 글만 — backfill 이 다른 도메인 글까지 재합성하지 않도록.
+  const site = c.get('site');
   const where = missingOg
-    ? "WHERE p.status='published' AND (p.og_image_url IS NULL OR p.og_image_url LIKE '/media/photos/%' OR p.og_image_url LIKE '/media/default-%')"
-    : "WHERE p.status='published'";
+    ? "WHERE p.site_id=? AND p.status='published' AND (p.og_image_url IS NULL OR p.og_image_url LIKE '/media/photos/%' OR p.og_image_url LIKE '/media/default-%')"
+    : "WHERE p.site_id=? AND p.status='published'";
 
   const { results } = await c.env.DB.prepare(
     `SELECT p.id, p.slug, p.region, p.og_image_url, p.meta_keywords,
@@ -183,7 +189,7 @@ api.get('/posts/list', async (c) => {
      ${where}
      ORDER BY p.id ASC
      LIMIT ? OFFSET ?`
-  ).bind(limit, offset).all<{
+  ).bind(site.id, limit, offset).all<{
     id: number; slug: string; region: string; og_image_url: string | null;
     meta_keywords: string | null;
     board_slug: string; board_title: string; site_domain: string;
