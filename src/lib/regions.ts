@@ -46,7 +46,11 @@ export function leafOf(region: string): string {
   const parts = region.trim().split(/\s+/);
   if (parts[0] === '경기도광주') return parts[1] || parts[0];  // 결합표기: 동 있으면 동
   if (parts.length >= 3) return parts.slice(2).join(' ');
-  if (parts.length === 2) return parts[1];
+  if (parts.length === 2) {
+    // 경기 광주시(시 단위)는 광주광역시 혼동 방지로 '경기도광주' 결합표기
+    if (parts[0] === '경기' && parts[1] === '광주시') return '경기도광주';
+    return parts[1];
+  }
   return parts[0] || '';
 }
 
