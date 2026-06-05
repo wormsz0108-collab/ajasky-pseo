@@ -40,8 +40,12 @@ export function cityOf(region: string): string {
   return parts[1] || parts[0] || '';
 }
 
+// 여러 시에 중복되는 일반 자치구명 — leaf 단독 사용 시 혼동되므로 시(광역) 접두.
+const AMBIGUOUS_GU = new Set(['동구', '서구', '남구', '북구', '중구']);
+
 // 노출 타깃 최말단 지명. 동·읍·면 > 시·군·구 > 광역(세종 등 단독).
 // "서울 강남구 압구정동"→"압구정동", "서울 관악구"→"관악구", "세종 조치원읍"→"조치원읍", "세종"→"세종".
+// 단, 동/서/남/북/중구는 "광주 북구"처럼 시 접두 유지(중복 구분).
 export function leafOf(region: string): string {
   const parts = region.trim().split(/\s+/);
   if (parts[0] === '경기도광주') return parts[1] || parts[0];  // 결합표기: 동 있으면 동
@@ -49,6 +53,8 @@ export function leafOf(region: string): string {
   if (parts.length === 2) {
     // 경기 광주시(시 단위)는 광주광역시 혼동 방지로 '경기도광주' 결합표기
     if (parts[0] === '경기' && parts[1] === '광주시') return '경기도광주';
+    // 동구/서구/남구/북구/중구 — 여러 시 중복되므로 시 접두 유지
+    if (AMBIGUOUS_GU.has(parts[1])) return `${parts[0]} ${parts[1]}`;
     return parts[1];
   }
   return parts[0] || '';

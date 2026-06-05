@@ -39,10 +39,19 @@ def _tokenize_region(region: str) -> dict[str, str]:
     return {"province": region, "city": "", "dong": ""}
 
 
+# 여러 시에 중복되는 일반 자치구명 — leaf 로 단독 사용 시 혼동되므로 시(광역)를 붙인다.
+_AMBIGUOUS_GU = {"동구", "서구", "남구", "북구", "중구"}
+
+
 def _city_disp(prov: str, city: str) -> str:
-    """시·군·구 표시명. 경기 광주시는 광주광역시 혼동 방지로 '경기도광주' 결합표기."""
+    """시·군·구 표시명.
+    - 경기 광주시 → '경기도광주' (광주광역시 혼동 방지)
+    - 동구/서구/남구/북구/중구 → '{시} {구}' (여러 시 중복되므로 시 접두)
+    """
     if prov == "경기" and city == "광주시":
         return "경기도광주"
+    if city in _AMBIGUOUS_GU and prov:
+        return f"{prov} {city}"
     return city
 
 
