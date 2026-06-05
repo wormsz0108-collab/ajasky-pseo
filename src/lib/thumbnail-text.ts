@@ -1,5 +1,6 @@
 // 썸네일 텍스트 분해
 // 검색 쿼리 일치성 우선: 큰 글자에 "지역 + 메인키워드", 리본엔 차별자
+import { leafOf } from './regions';
 
 export interface ThumbnailText {
   ribbon: string;            // 핑크 리본 (작게)
@@ -20,18 +21,20 @@ const BOARD_THUMBNAIL_MAP: Record<string, { ribbon: string; main: string }> = {
 };
 
 export function buildThumbnailText(region: string, boardTitle: string): ThumbnailText {
+  // 노출 타깃 일치: 큰 글자 첫 줄은 상위 광역/시·군 없이 최말단 지명만.
+  const leaf = leafOf(region);
   const mapped = BOARD_THUMBNAIL_MAP[boardTitle];
   if (mapped) {
     return {
       ribbon: mapped.ribbon,
-      headlinePrefix: region,
+      headlinePrefix: leaf,
       headlineHighlight: mapped.main,
     };
   }
   // 알 수 없는 보드면 안전 fallback (지역명 절대 리본에 들어가지 않게)
   return {
     ribbon: boardTitle,
-    headlinePrefix: region,
+    headlinePrefix: leaf,
     headlineHighlight: boardTitle,
   };
 }

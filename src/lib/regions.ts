@@ -40,6 +40,16 @@ export function cityOf(region: string): string {
   return parts[1] || parts[0] || '';
 }
 
+// 노출 타깃 최말단 지명. 동·읍·면 > 시·군·구 > 광역(세종 등 단독).
+// "서울 강남구 압구정동"→"압구정동", "서울 관악구"→"관악구", "세종 조치원읍"→"조치원읍", "세종"→"세종".
+export function leafOf(region: string): string {
+  const parts = region.trim().split(/\s+/);
+  if (parts[0] === '경기도광주') return parts[1] || parts[0];  // 결합표기: 동 있으면 동
+  if (parts.length >= 3) return parts.slice(2).join(' ');
+  if (parts.length === 2) return parts[1];
+  return parts[0] || '';
+}
+
 // 글 region 인근 시군구 전체 반환 (max 미지정 시 전부).
 // 경쟁사 100개+ 내부 링크 대비 → 광역의 전 시군구 노출이 D.I.A. 내부 링크 시그널에 유리.
 // region 이 "경기" 같은 광역이면 산하 전부, "경기 수원시" 같은 시군구면 같은 광역 산하 전부 반환.

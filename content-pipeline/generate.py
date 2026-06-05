@@ -16,6 +16,7 @@ from typing import Any
 import google.generativeai as genai
 
 from prompts import build_prompt
+from keyword_variants import leafify
 
 # Gemini에 강제할 응답 스키마 (response_schema 사용 시 SDK가 엄격 강제)
 RESPONSE_SCHEMA = {
@@ -106,6 +107,11 @@ def generate_post(region: str, board_title: str, longtail: str, model_name: str 
             cleaned = _clean_json_text(raw_text)
             data = _parse_json_lenient(cleaned)
             _validate(data)
+            # 노출 타깃 일치: 제목(H1)·메타설명·본문(H2/H3·산문)의 상위 지역 prefix 제거
+            # → "서울 강남구 압구정동 …" 을 "압구정동 …" 으로. (인근 시군구 등 타 지역명은 유지)
+            for k in ("title", "meta_description", "body_md"):
+                if data.get(k):
+                    data[k] = leafify(data[k], region)
             return data
         except Exception as e:
             print(f"[attempt {attempt+1}/3] FAIL: {type(e).__name__}: {e}", flush=True)

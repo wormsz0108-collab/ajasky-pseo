@@ -39,6 +39,42 @@ def _tokenize_region(region: str) -> dict[str, str]:
     return {"province": region, "city": "", "dong": ""}
 
 
+def region_leaf(region: str) -> str:
+    """노출 타깃이 되는 최말단 지명. 동·읍·면 > 시·군·구 > 광역(세종 등 단독).
+
+    예: "서울 강남구 압구정동"→"압구정동", "서울 관악구"→"관악구",
+        "세종 조치원읍"→"조치원읍", "세종"→"세종".
+    """
+    r = _tokenize_region(region)
+    return r["dong"] or r["city"] or r["province"]
+
+
+def leafify(text: str, region: str) -> str:
+    """제목·헤딩·본문에서 글 자신의 상위 지역 prefix 제거 → leaf 중심.
+
+    "서울 강남구 압구정동 스카이차" → "압구정동 스카이차"
+    "서울 관악구 스카이차"           → "관악구 스카이차"
+    상위 광역 토큰(서울/경기…)이 없는 결합표기·세종 단독은 변경하지 않는다.
+    인근 시군구 등 다른 지역명은 문자열이 달라 건드리지 않는다.
+    """
+    if not text:
+        return text
+    r = _tokenize_region(region)
+    prov, city, dong = r["province"], r["city"], r["dong"]
+    if not prov:                       # 결합표기(경기도광주 등): 광역 토큰 없음
+        if city and dong:              # "경기도광주 경안동" → "경안동"
+            return text.replace(f"{city} {dong}", dong)
+        return text                    # "경기도광주" 단독 → 이미 leaf
+    if dong and city:                  # 동 단위: 광역+시군구 제거
+        text = text.replace(f"{prov} {city} {dong}", dong)
+        text = text.replace(f"{prov} {dong}", dong)
+        text = text.replace(f"{prov} {city}", city)
+    elif city:                         # 시군구 단위: 광역 제거
+        text = text.replace(f"{prov} {city}", city)
+    # 광역 단독(세종/전북 등)은 leaf=광역 → 변경 없음
+    return text
+
+
 def _board_parts(board_title: str) -> tuple[str, str]:
     """보드 → (main, specific). '스카이차 이용료' → ('스카이차', '이용료').
 

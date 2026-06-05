@@ -20,7 +20,7 @@ from pathlib import Path
 
 from generate import generate_post
 from image_pool import pick_photo_key
-from keyword_variants import derive_keywords
+from keyword_variants import derive_keywords, region_leaf
 from longtails import get_longtails, LONGTAILS_BY_BOARD
 from og_compose import compose_for_site
 from publish import publish, slugify_ko
@@ -147,9 +147,9 @@ def build_og(slug: str, region: str, board_title: str) -> str:
         composed = compose_for_site(
             SITE_DOMAIN,
             source_bytes,
-            ribbon=ribbon,             # 항상 보드 카테고리. 지역명 fallback 금지.
-            headline_prefix=region,    # 큰 글자 1줄 = 지역
-            headline_main=head_main,   # 큰 글자 2줄 = 메인 키워드
+            ribbon=ribbon,                      # 항상 보드 카테고리. 지역명 fallback 금지.
+            headline_prefix=region_leaf(region), # 큰 글자 1줄 = 최말단 지명(동·읍·면/시군구)
+            headline_main=head_main,            # 큰 글자 2줄 = 메인 키워드
         )
     except Exception as e:
         print(f"[warn] OG compose failed: {e}", file=sys.stderr)
@@ -235,7 +235,7 @@ def _build_body_og_variants(slug: str, region: str, board_title: str, hero_photo
                 site,
                 r.content,
                 ribbon=ribbon,
-                headline_prefix=region,
+                headline_prefix=region_leaf(region),
                 headline_main=head_main,
             )
             _requests.post(

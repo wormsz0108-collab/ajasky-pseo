@@ -19,34 +19,38 @@ from diversity import (
     pick_synonym,
     pick_title_format,
 )
+from keyword_variants import region_leaf
 
 COMMON_RULES = """엄수 규칙:
 1. "렌탈" 단어 사용 절대 금지 ("일대", "이용", "사용"으로 대체)
 2. 가격/비용/시간 같은 구체 수치는 단언 금지 ("달라질 수 있습니다", "~인 편이 좋습니다", "현장에 따라 조정될 수 있습니다")
 3. 지역명({region})은 도입과 각 h2 섹션 첫 문장에 자연스럽게 삽입
 4. h1 정확히 1개, h2는 {n_sections}개 (마지막 2개는 FAQ + 서비스지역 고정)
-5. **각 h2 섹션 본문은 {min_chars}~{max_chars}자**. 깊이 있는 정보 전달 우선 — 짧으면 페널티
+5. **각 h2 섹션 본문은 {min_chars}~{max_chars}자**로 간결하게. 핵심만 — 군더더기·동어반복·뻔한 일반론으로 분량 채우기 금지
 6. 리스트 항목은 정확히 {list_count}개
 7. {longtail} 키워드를 도입과 후반부 섹션에 자연스럽게 1회씩 언급
 8. 본문에 동일 문장/표현 재사용 금지 — 어휘 변화 필수
 9. 광고 톤 금지, 정보·안내·경험담 톤 유지 (실제 작업자가 쓴 듯한 디테일 포함)
 10. 본문 안에 큰따옴표 사용 금지 (JSON 깨짐 방지). 강조는 줄바꿈/대시·콜론으로
-11. **FAQ는 반드시 10개 이상 작성**. 짧고 추상적 답변 금지 — 각 A는 최소 80자 이상, 구체적 시나리오·예시 포함
-12. 각 h2 본문은 단순 나열식 X — 도입 문장 + 구체 예시 + 적용 팁 + 마무리 문장으로 단락 3~5개 구성
+11. **FAQ는 6~8개**. 짧고 추상적 답변 금지 — 각 A는 60~120자, 구체적 시나리오·예시 포함
+12. 각 h2 본문은 단락 2~3개(각 2~4문장)로 짧게 — 도입 → 구체 예시·기준 → 적용 팁. 긴 통문단 금지
 13. 같은 지역(시·도·시군구)·인근 지역명을 본문에 2~3회 자연 언급 (지역 SEO 시그널)
 14. 차종(1톤·3.5톤·5톤), 작업 종류(외벽·간판·전기·도장·청소·이사), 현장 변수(협소 골목·옥상·고층·야간·전선)를 자연스럽게 섞어 풍부도 ↑
-15. **제목은 반드시 "{region} {board}" 로 시작** — 네이버는 제목 앞쪽 키워드에 더 높은 가중치 부여. longtail 은 콜론/대시 뒤에 위치. 키워드 단어 분해/도치 절대 금지.
+15. **제목은 반드시 "{leaf} {board}" 로 시작** — 상위 광역/시·군명(예: "서울 강남구")은 제목 앞에 절대 붙이지 말 것. 최말단 지명({leaf})만 맨 앞에. 네이버는 제목 앞쪽 키워드에 더 높은 가중치 부여. longtail 은 콜론/대시 뒤에 위치. 키워드 단어 분해/도치 절대 금지.
+16. **각 h2·h3 제목도 "{leaf} …" 로 시작** — 헤딩 앞에 상위 광역/시·군명 붙이지 말 것.
+17. **가독성·전문성**: 한 단락 2~4문장. 전문 용어는 한 번 쉽게 풀어 설명. 과장·감탄·광고체 대신 현장 기준·수치 범위로 신뢰감. 읽는 사람이 한눈에 핵심을 잡게 구성
+18. **날씨 이야기 절대 금지** — 날씨·기온·계절·비·눈·바람·미세먼지·우천 등 기상 화제 언급 금지 ("○○동 날씨" 같은 무관한 검색 유입 방지). 작업 안전 관련도 기상 표현 대신 "현장 여건"으로 일반화
 
 출력 형식: JSON 한 객체. JSON 외 텍스트 절대 금지.
 
 JSON 스키마:
 {{
-  "title": "({title_format} 형식으로, 50자 이내, {region}과 {board} 모두 포함)",
-  "meta_description": "(검색 결과 노출용, 반드시 80자 이내, {region} {board} 포함)",
+  "title": "({title_format} 형식으로, 50자 이내, 맨 앞은 {leaf}, {board} 포함)",
+  "meta_description": "(검색 결과 노출용, 반드시 80자 이내, 맨 앞은 {leaf} {board})",
   "meta_keywords": "(쉼표 구분, 6~8개, 첫째는 \\"{region} {board}\\")",
-  "body_md": "(## 1. 제목\\n\\n본문...\\n\\n## 2. 제목\\n\\n... 형식. \\\\n 이스케이프된 문자열로 출력. 본문은 풍부하게)",
+  "body_md": "(## 1. 제목\\n\\n본문...\\n\\n## 2. 제목\\n\\n... 형식. \\\\n 이스케이프된 문자열로 출력. 간결하고 전문적으로)",
   "toc": [{{"level": 2, "title": "..."}}, ...],
-  "faq": [{{"q": "...", "a": "..."}}, {{"q": "...", "a": "..."}}, ...10개 이상]
+  "faq": [{{"q": "...", "a": "..."}}, {{"q": "...", "a": "..."}}, ...6~8개]
 }}"""
 
 
@@ -160,7 +164,8 @@ def build_prompt(region: str, board: str, longtail: str) -> tuple[str, dict]:
     n_sections = pick_n_sections(default=9)
     min_chars, max_chars = pick_body_target_chars()
     list_count = pick_list_count()
-    title_format = pick_title_format().format(region=region, board=board, longtail=longtail)
+    leaf = region_leaf(region)   # 노출 타깃 최말단 지명 (동·읍·면 > 시·군·구 > 광역)
+    title_format = pick_title_format().format(region=leaf, board=board, longtail=longtail)
 
     # 섹션 동의어 한 번에 뽑기
     syn = {
@@ -183,7 +188,7 @@ def build_prompt(region: str, board: str, longtail: str) -> tuple[str, dict]:
 {outline}
 
 {COMMON_RULES.format(
-    region=region, board=board, longtail=longtail,
+    region=region, leaf=leaf, board=board, longtail=longtail,
     n_sections=n_sections, min_chars=min_chars, max_chars=max_chars,
     list_count=list_count, title_format=title_format,
 )}
