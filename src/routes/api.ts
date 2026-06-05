@@ -198,6 +198,78 @@ api.get('/posts/list', async (c) => {
   return c.json({ posts: results, limit, offset });
 });
 
+// 네이버 순위 측정 결과 적재 — check_naver_rank.py 가 호출.
+// body: { ranks: [{post_id, query, rank|null, matched_url|null, total_results|null}, ...] }
+// 사이트는 요청 Host 로 결정(다른 도메인 글이 섞이지 않도록).
+interface RankInput {
+  post_id?: number | null;
+  query: string;
+  rank?: number | null;
+  matched_url?: string | null;
+  total_results?: number | null;
+}
+api.post('/ranks', async (c) => {
+  const site = c.get('site');
+  let body: { ranks?: RankInput[] };
+  try { body = await c.req.json(); }
+  catch { return c.json({ error: 'invalid_json' }, 400); }
+  const ranks = body.ranks;
+  if (!Array.isArray(ranks) || ranks.length === 0) {
+    return c.json({ error: 'missing_ranks' }, 400);
+  }
+  if (ranks.length > 1000) return c.json({ error: 'too_many', detail: 'max 1000' }, 400);
+
+  const now = new Date().toISOString();
+  const stmt = c.env.DB.prepare(
+    `INSERT INTO rank_history (site_id, post_id, query, rank, matched_url, total_results, checked_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  const batch = [];
+  for (const r of ranks) {
+    if (typeof r.query !== 'string' || !r.query.trim()) {
+      return c.json({ error: 'invalid_row', detail: 'query required' }, 400);
+    }
+    batch.push(stmt.bind(
+      site.id,
+      r.post_id ?? null,
+      r.query,
+      r.rank ?? null,
+      r.matched_url ?? null,
+      r.total_results ?? null,
+      now,
+    ));
+  }
+  await c.env.DB.batch(batch);
+  return c.json({ inserted: batch.length, checked_at: now }, 201);
+});
+
+// 순위 조회 — 글별 최신 측정값 (latest=1) 또는 한 글의 시계열(post_id 지정).
+api.get('/ranks', async (c) => {
+  const site = c.get('site');
+  const postId = c.req.query('post_id');
+  if (postId) {
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, post_id, query, rank, matched_url, total_results, checked_at
+       FROM rank_history WHERE site_id = ? AND post_id = ?
+       ORDER BY checked_at DESC LIMIT 100`
+    ).bind(site.id, parseInt(postId, 10)).all();
+    return c.json({ post_id: parseInt(postId, 10), history: results });
+  }
+  // 글별 최신 1건씩 (가장 최근 측정 라운드 요약)
+  const { results } = await c.env.DB.prepare(
+    `SELECT rh.post_id, rh.query, rh.rank, rh.matched_url, rh.checked_at, p.region, p.slug
+     FROM rank_history rh
+     JOIN (
+       SELECT post_id, MAX(checked_at) AS latest
+       FROM rank_history WHERE site_id = ? GROUP BY post_id
+     ) m ON rh.post_id = m.post_id AND rh.checked_at = m.latest
+     LEFT JOIN posts p ON rh.post_id = p.id
+     WHERE rh.site_id = ?
+     ORDER BY (rh.rank IS NULL), rh.rank ASC`
+  ).bind(site.id, site.id).all();
+  return c.json({ ranks: results });
+});
+
 // 백필 — meta_keywords 갱신.
 api.patch('/posts/:id{[0-9]+}/keywords', async (c) => {
   const id = parseInt(c.req.param('id'), 10);
