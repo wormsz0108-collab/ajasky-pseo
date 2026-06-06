@@ -121,6 +121,9 @@ ${children}
       <p>현장 사진을 보내주시면 정확한 견적이 빠릅니다.<br>24시 전국 출장 가능.</p>
     </div>
   </div>
+  <div class="f-biz">
+    <p>상호 ${site.site_name} · 대표자 윤재근 · 사업자등록번호 808-57-00602</p>
+  </div>
 </footer>
 
 </body>

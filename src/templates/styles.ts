@@ -114,6 +114,8 @@ footer .f-inner{max-width:1180px;margin:0 auto;display:grid;gap:18px;grid-templa
 footer h4{font-size:13px;margin:0 0 8px;color:var(--text);font-weight:700}
 footer a{color:var(--meta);text-decoration:none}
 footer a:hover{color:var(--text)}
+footer .f-biz{max-width:1180px;margin:18px auto 0;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--meta)}
+footer .f-biz p{margin:0}
 
 /* board page — card grid */
 .page-h{margin:8px 0 24px}
