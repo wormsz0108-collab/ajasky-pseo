@@ -84,7 +84,7 @@ export function PostPage(props: PostPageProps) {
       </div>
 
       ${Thumbnail({
-        imageUrl: post.og_image_url || '/media/default-hero.jpg',
+        imageUrl: post.og_image_url || '/media/photos/001.jpg',
         ribbon: thumbnailText.ribbon,
         headlinePrefix: thumbnailText.headlinePrefix,
         headlineHighlight: thumbnailText.headlineHighlight,

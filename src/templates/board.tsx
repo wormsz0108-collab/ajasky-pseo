@@ -47,7 +47,7 @@ export function BoardPage(props: BoardPageProps) {
             <a class="card" href="/${encodeURIComponent(board.slug)}/${encodeURIComponent(p.slug)}">
               <div class="thumb">
                 ${Thumbnail({
-                  imageUrl: p.og_image_url || '/media/default-hero.jpg',
+                  imageUrl: p.og_image_url || '/media/photos/001.jpg',
                   ribbon: p.thumbnailText.ribbon,
                   headlinePrefix: p.thumbnailText.headlinePrefix,
                   headlineHighlight: p.thumbnailText.headlineHighlight,
