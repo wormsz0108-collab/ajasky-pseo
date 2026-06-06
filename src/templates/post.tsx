@@ -90,7 +90,7 @@ export function PostPage(props: PostPageProps) {
         headlineHighlight: thumbnailText.headlineHighlight,
         brandName: site.site_name,
         phone: site.phone,
-        alt: `${post.region} ${board.title} 현장`,
+        alt: `${post.region} ${board.title} 스카이차 작업 현장`,
       })}
 
       <div class="toc">
@@ -126,7 +126,8 @@ export function PostPage(props: PostPageProps) {
             headlineHighlight: thumbnailText.headlineHighlight,
             brandName: site.site_name,
             phone: site.phone,
-            alt: `${post.region} ${board.title} 대표 이미지`,
+            // 본문 3장 각각 구분되는 설명형 alt (중복 alt 방지).
+            alt: `${post.region} ${board.title} ${['작업 현장', '장비 안내', '시공 사례'][(i + 1) / 2 - 1]}`,
           }) : ''}
         </section>
       `)}
