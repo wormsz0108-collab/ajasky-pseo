@@ -99,6 +99,32 @@ const faviconResponse = () => new Response(FAVICON_PNG, {
 app.get('/favicon.ico', () => faviconResponse());
 app.get('/favicon.png', () => faviconResponse());
 
+// 홈·보드 등 글이 아닌 페이지의 OG 폴백 이미지.
+// 정적 og-default.jpg 파일은 존재하지 않으므로(과거 404 원인), 발행된 글의
+// 이미 구워진 OG(/media/og/sN/…) 중 하나를 랜덤으로 골라 R2에서 그대로 스트리밍한다.
+// site 컨텍스트로 도메인별 글에서 고르므로 ajasky·wormsz1 등 각 사이트에 맞게 노출됨.
+app.get('/og-default.jpg', async (c) => {
+  const site = c.get('site');
+  const row = await c.env.DB.prepare(
+    `SELECT og_image_url FROM posts
+     WHERE site_id = ? AND status = 'published'
+       AND og_image_url IS NOT NULL AND og_image_url LIKE '/media/og/%'
+     ORDER BY RANDOM() LIMIT 1`
+  ).bind(site.id).first<{ og_image_url: string }>();
+
+  const key = row?.og_image_url?.replace(/^\/media\//, '');
+  let obj = key ? await c.env.MEDIA.get(key) : null;
+  if (!obj) obj = await c.env.MEDIA.get('photos/001.jpg'); // 글이 없는 사이트용 안전 폴백
+  if (!obj) return c.text('Not found', 404);
+
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set('content-type', 'image/jpeg');
+  // OG 스크래퍼가 한 번 가져가면 캐시하므로 1시간 엣지 캐시. 매 스크랩마다 랜덤 1장.
+  headers.set('cache-control', 'public, max-age=3600');
+  return new Response(obj.body, { headers });
+});
+
 // 홈
 app.get('/', async (c) => {
   const site = c.get('site');
