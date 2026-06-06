@@ -92,18 +92,51 @@ def _region_counts() -> dict:
     return _REGION_COUNTS
 
 
-def pick_target():
-    """커버리지 우선: 글 수가 가장 적은 지역부터 뽑아 모든 지역을 고르게 채운다.
+# 보드 검색량 가중 (메모리 실측: 스카이차 > 비용/가격 클러스터 > 고소작업차 > 고소작업차량).
+# 발행 시 이 가중으로 보드를 뽑아 검색가치 높은 키워드부터 채운다. 단 과도한 쏠림은
+# 네이버 패턴화 위험이라 완만하게(5:3:2:1) — 보드 분산은 유지.
+BOARD_WEIGHTS = {
+    "스카이차":       5,   # 최상위 단일 키워드
+    "스카이차 일대":   3,   # 핵심 상업 클러스터
+    "스카이차 비용":   3,
+    "스카이차 가격":   3,
+    "스카이차 요금":   3,
+    "스카이차 이용료": 3,
+    "스카이 작업차":   2,   # = 고소작업차 영역, 중간
+    "고소작업차량":    1,   # 검색량 최하 — 후순위
+}
 
-    같은 최소 구간 안에서는 랜덤 (네이버 패턴 회피). 보드·longtail 은 그대로 랜덤.
-    counts 가 비면(조회 실패) 전부 0 동률 → 기존처럼 순수 랜덤.
+
+def _pick_board():
+    weights = [BOARD_WEIGHTS.get(title, 1) for _, title in BOARDS]
+    return random.choices(BOARDS, weights=weights, k=1)[0]
+
+
+def pick_target():
+    """커버리지 우선 + 레벨 우선순위(시군구 > 법정동) + 보드 검색량 가중.
+
+    1) 레벨 우선순위: 시·군·구/광역을 먼저 채운다. 법정동은 검색량이 거의 0이라
+       (메모리 실측) 후순위 — 모든 시군구/광역이 DONG_GATE 건 이상 쌓이기 전엔
+       후보에서 제외한다. 결과적으로 "시군구 전국 1바퀴 → 시군구 심화 → 법정동" 순서.
+       DONG_GATE(env, 기본 6)로 조정: 1=시군구 1바퀴 직후 개방, 큰 값=법정동 사실상 보류.
+    2) 같은 레벨 안에서는 글 수 최소 지역부터(랜덤 동률) → 넓게 먼저(네이버 패턴 회피).
+    3) 보드는 검색량 가중 랜덤(_pick_board), longtail 은 랜덤.
+    counts 가 비면(조회 실패) 전부 0 동률 → 시군구부터 순수 커버리지로 degrade.
     """
     targets = all_region_targets()
     counts = _region_counts()
-    least = min(counts.get(r, 0) for r, _ in targets)
-    pool = [(r, t) for r, t in targets if counts.get(r, 0) == least]
+
+    # 법정동 개방 임계값: 모든 시군구/광역이 이 건수 이상이 된 뒤에야 법정동 발행.
+    # 기본 6 ≈ 시군구당 핵심 보드 한 바퀴(스카이차+비용/가격/요금/이용료/일대).
+    dong_gate = int(os.environ.get("DONG_GATE", "6"))
+    tier0 = [(r, rt) for r, rt in targets if rt != "법정동"]
+    tier0_min = min((counts.get(r, 0) for r, _ in tier0), default=0)
+    candidates = tier0 if tier0_min < dong_gate else targets
+
+    least = min(counts.get(r, 0) for r, _ in candidates)
+    pool = [(r, t) for r, t in candidates if counts.get(r, 0) == least]
     region, region_type = random.choice(pool)
-    board_slug, board_title = random.choice(BOARDS)
+    board_slug, board_title = _pick_board()
     longtail = random.choice(get_longtails(board_title))
     return region, region_type, board_slug, board_title, longtail
 
