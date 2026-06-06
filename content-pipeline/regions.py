@@ -91,16 +91,24 @@ def all_region_targets():
     """
     INCLUDE_FULL_REGIONS = {"서울", "경기", "인천", "대전", "세종", "충북", "충남"}
 
+    # 시·군·구 단위만 추가 발행하는 권역 (2026-06 확장 — 제주 제외 전국 나머지).
+    #   광역 단독 페이지·법정동은 만들지 않고 시군구 레벨만 발행.
+    #   중복 구(동구/서구/남구/북구/중구)는 keyword_variants._AMBIGUOUS_GU 가
+    #   "부산 동구"처럼 시 접두를 붙여 구분 → 제목/슬러그/OG 모두 안전.
+    INCLUDE_SIGUNGU_ONLY = {
+        "부산", "대구", "광주", "울산", "강원", "전북", "전남", "경북", "경남",
+    }  # 제주 제외
+
     out = []
 
-    # 1) 광역
+    # 1) 광역 (전체 3단계 권역만 — 시군구만 권역은 광역 단독 페이지 없음)
     for r in REGIONS_BY_LEVEL["광역"]:
         if r in INCLUDE_FULL_REGIONS:
             out.append((r, "광역"))
 
-    # 2) 시군구
+    # 2) 시군구 (전체 권역 + 시군구만 권역)
     for parent, children in REGIONS_BY_LEVEL["시군구"].items():
-        if parent in INCLUDE_FULL_REGIONS:
+        if parent in INCLUDE_FULL_REGIONS or parent in INCLUDE_SIGUNGU_ONLY:
             for c in children:
                 out.append((f"{parent} {c}", "시군구"))
 
