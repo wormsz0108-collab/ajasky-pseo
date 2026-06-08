@@ -15,7 +15,7 @@ import { parseBodyMarkdown } from './lib/markdown';
 import { pickBodyPhotos } from './lib/body-photos';
 import { NotFoundPage } from './templates/notfound';
 import apiRoutes from './routes/api';
-import { cityOf } from './lib/regions';
+import { cityOf, leafify } from './lib/regions';
 import {
   buildDummyPost, buildDummySections, buildDummyFaq,
 } from './lib/dummy';
@@ -247,15 +247,31 @@ app.get('/:boardSlug/:postSlug', async (c) => {
     return c.notFound();
   }
 
+  // 노출 타깃 일치: 글 자신의 상위 지역(광역) prefix 제거 → leaf 중심 표기.
+  // 생성 파이프라인(generate.py)과 동일 규칙을 렌더 단계에 적용 → 규칙 추가 전 발행된 옛 글도 즉시 반영.
+  // 이미 leafify 된 새 글에는 무영향(idempotent). region 은 라벨용이라 원본 유지.
+  post.title = leafify(post.title, post.region);
+  post.meta_description = leafify(post.meta_description, post.region);
+  post.body_md = leafify(post.body_md, post.region);
+  // 같은 보드 다른 글 링크 — 각자 자신의 region 으로 leaf 화.
+  for (const p of pool) p.title = leafify(p.title, p.region);
+
   // body_md 마크다운 파서 → 9-섹션 추출. 파싱 실패 시 dummy fallback.
   let sections = parseBodyMarkdown(post.body_md);
   if (sections.length < 3) {
     sections = buildDummySections(post.region, board.title);
   }
+  const faq: { q: string; a: string }[] = (post.faq_json
+    ? safeJsonParse(post.faq_json)
+    : buildDummyFaq(post.region, board.title)
+  ).map((f: { q: string; a: string }) => ({
+    q: leafify(f.q, post.region),
+    a: leafify(f.a, post.region),
+  }));
   const resp = renderPost({
     site, boards, board, post,
     sections,
-    faq: post.faq_json ? safeJsonParse(post.faq_json) : buildDummyFaq(post.region, board.title),
+    faq,
     sameBoardPosts,
     pool,
   });

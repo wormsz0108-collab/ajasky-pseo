@@ -60,6 +60,44 @@ export function leafOf(region: string): string {
   return parts[0] || '';
 }
 
+// 결합 표기 시군구(광주광역시 혼동 방지) — leaf 단독 사용.
+const MERGED_CITIES = new Set(['경기도광주']);
+
+// 시·군·구 표시명. 경기 광주시 → '경기도광주', 동/서/남/북/중구 → '{시} {구}'(시 접두 유지).
+function cityDisp(prov: string, city: string): string {
+  if (prov === '경기' && city === '광주시') return '경기도광주';
+  if (AMBIGUOUS_GU.has(city) && prov) return `${prov} ${city}`;
+  return city;
+}
+
+// 모든 occurrence 치환 (Python str.replace 동등).
+function replaceAll(text: string, from: string, to: string): string {
+  if (!from) return text;
+  return text.split(from).join(to);
+}
+
+// 제목·헤딩·본문에서 글 자신의 상위 지역 prefix 제거 → leaf 중심.
+// "충남 논산시 스카이차 이용료" → "논산시 스카이차 이용료"
+// "서울 중구 무교동 스카이차 요금" → "무교동 스카이차 요금"
+// "경기 광주시 스카이차" → "경기도광주 스카이차"(광주 특례)
+// 광역 단독(세종/전북 등 1토큰)은 변경하지 않는다(leaf=광역 자체).
+// content-pipeline/keyword_variants.py 의 leafify 와 동일 규칙 — 이미 처리된 새 글에는 무영향(idempotent).
+export function leafify(text: string, region: string): string {
+  if (!text) return text;
+  const parts = region.trim().split(/\s+/);
+  if (parts.length < 2) return text;                 // 광역/단일 토큰 단독 → 그대로
+  if (parts.length >= 3) {                            // 광역 시군구 동: 광역+시군구 제거, 동 유지
+    const prov = parts[0], city = parts[1], leaf = parts.slice(2).join(' ');
+    text = replaceAll(text, `${prov} ${city} ${leaf}`, leaf);
+    text = replaceAll(text, `${prov} ${city}`, cityDisp(prov, city));
+    text = replaceAll(text, `${prov} ${leaf}`, leaf);
+  } else {                                            // 2토큰: 광역 제거 → 시군구(광주는 결합표기)
+    const prov = parts[0], city = parts[1];
+    text = replaceAll(text, `${prov} ${city}`, cityDisp(prov, city));
+  }
+  return text;
+}
+
 // 글 region 인근 시군구 전체 반환 (max 미지정 시 전부).
 // 경쟁사 100개+ 내부 링크 대비 → 광역의 전 시군구 노출이 D.I.A. 내부 링크 시그널에 유리.
 // region 이 "경기" 같은 광역이면 산하 전부, "경기 수원시" 같은 시군구면 같은 광역 산하 전부 반환.
