@@ -177,12 +177,18 @@ export function PostPage(props: PostPageProps) {
     </article>
   `;
 
+  // og 이미지 캐시버스터: 수정일(없으면 발행일) 기반 토큰. 이미지 교체 시 modified_at 가 바뀌어
+  // og:image URL 이 갱신 → 네이버가 옛 캐시 대신 새 이미지를 재수집한다.
+  const ogVerSrc = post.modified_at || post.published_at;
+  const ogImageVersion = ogVerSrc ? Math.floor(Date.parse(ogVerSrc) / 1000) || undefined : undefined;
+
   return Layout({
     site, boards,
     title: post.title,
     description: post.meta_description,
     canonicalPath,
     ogImageUrl: post.og_image_url,
+    ogImageVersion,
     ogType: 'article',
     activeBoardSlug: board.slug,
     keywords: post.meta_keywords,
