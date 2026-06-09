@@ -13,7 +13,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from prompts import build_prompt
 from keyword_variants import leafify
@@ -54,11 +55,11 @@ def _load_prompt(region: str, board_title: str, longtail: str) -> tuple[str, dic
     return build_prompt(region, board_title, longtail)
 
 
-def _configure_gemini() -> None:
+def _make_client() -> genai.Client:
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY env var missing")
-    genai.configure(api_key=key)
+    return genai.Client(api_key=key)
 
 
 def _safe_resp_text(resp) -> str:
@@ -81,22 +82,28 @@ def _safe_resp_text(resp) -> str:
 
 
 def generate_post(region: str, board_title: str, longtail: str, model_name: str = "gemini-2.5-flash") -> dict[str, Any]:
-    _configure_gemini()
+    client = _make_client()
     prompt, prompt_meta = _load_prompt(region, board_title, longtail)
     print(f"[diversity] shape={prompt_meta['shape']} n_sections={prompt_meta['n_sections']} list_count={prompt_meta['list_count']} body_len={prompt_meta['min_chars']}~{prompt_meta['max_chars']}", flush=True)
-    model = genai.GenerativeModel(model_name)
+
+    # thinking 토큰이 비용의 ~2/3 (실측). 9-섹션 구조는 thinking 없이도 유지되므로 기본 0(끔).
+    # 품질 보강 필요 시 env GEMINI_THINKING_BUDGET 로 256~1024 부여 가능.
+    thinking_budget = int(os.environ.get("GEMINI_THINKING_BUDGET", "0"))
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=RESPONSE_SCHEMA,
+        temperature=0.9,
+        top_p=0.95,
+        thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+    )
 
     for attempt in range(3):
         raw_text = ""
         try:
-            resp = model.generate_content(
-                prompt,
-                generation_config={
-                    "response_mime_type": "application/json",
-                    "response_schema": RESPONSE_SCHEMA,
-                    "temperature": 0.9,
-                    "top_p": 0.95,
-                },
+            resp = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=config,
             )
             raw_text = _safe_resp_text(resp)
             # 항상 응답 head 로깅 (디버깅용)
