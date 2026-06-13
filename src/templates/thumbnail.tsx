@@ -9,14 +9,18 @@ interface ThumbnailProps {
   brandName: string;
   phone: string;
   alt?: string;
+  eager?: boolean;                  // 대표(히어로) 이미지면 true → loading=eager + fetchpriority=high
 }
 
 export function Thumbnail(props: ThumbnailProps) {
   const {
     imageUrl, ribbon, headlinePrefix, headlineHighlight,
     tag = '24시 전국 배차 / 안전 책임 작업',
-    brandName, phone, alt = '',
+    brandName, phone, alt = '', eager = false,
   } = props;
+
+  // 대표 이미지는 lazy 금지 — 네이버/구글이 대표 썸네일로 인식하고 LCP(로딩속도)도 개선.
+  const loadAttr = eager ? html`loading="eager" fetchpriority="high"` : html`loading="lazy"`;
 
   // og/ 경로는 Python compose_og 로 디자인(리본/헤드라인/브랜드바)이 이미 baked in.
   // 그 위에 HTML 오버레이 또 그리면 텍스트가 두 번 겹쳐 보이므로 plain img만 출력.
@@ -25,14 +29,14 @@ export function Thumbnail(props: ThumbnailProps) {
   if (isBaked) {
     return html`
       <div class="hero hero-baked">
-        <img src="${imageUrl}" alt="${alt}" loading="lazy">
+        <img src="${imageUrl}" alt="${alt}" width="1080" height="1080" ${loadAttr}>
       </div>
     `;
   }
 
   return html`
     <div class="hero">
-      <img src="${imageUrl}" alt="${alt}" loading="lazy">
+      <img src="${imageUrl}" alt="${alt}" width="1080" height="1080" ${loadAttr}>
       <div class="side"><span class="vt">AJASKY</span></div>
       <span class="ribbon">${ribbon}</span>
       <div class="head">

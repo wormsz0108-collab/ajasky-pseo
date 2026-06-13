@@ -91,6 +91,7 @@ export function PostPage(props: PostPageProps) {
         brandName: site.site_name,
         phone: site.phone,
         alt: `${post.region} ${board.title} 스카이차 작업 현장`,
+        eager: true,   // 대표 이미지 — 네이버 썸네일 인식 + LCP (.shop 사이트와 동일)
       })}
 
       <div class="toc">
