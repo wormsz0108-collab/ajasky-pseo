@@ -178,18 +178,17 @@ export function PostPage(props: PostPageProps) {
     </article>
   `;
 
-  // og 이미지 캐시버스터: 수정일(없으면 발행일) 기반 토큰. 이미지 교체 시 modified_at 가 바뀌어
-  // og:image URL 이 갱신 → 네이버가 옛 캐시 대신 새 이미지를 재수집한다.
-  const ogVerSrc = post.modified_at || post.published_at;
-  const ogImageVersion = ogVerSrc ? Math.floor(Date.parse(ogVerSrc) / 1000) || undefined : undefined;
-
+  // og:image URL 은 캐시버스터 없이 영구 고정한다.
+  // (과거: modified_at 기반 ?v= 를 붙였으나, 키워드 백필 등 이미지와 무관한 수정에도
+  //  modified_at 가 바뀌어 og:image URL 이 출렁 → 네이버가 썸네일 수집을 매번 다시 시작 →
+  //  영영 안정화 못 함. 이미지를 실제 교체하는 드문 경우엔 R2 키(파일명)를 바꾸거나
+  //  네이버 서치어드바이저에서 해당 URL 만 수동 수집 요청한다.)
   return Layout({
     site, boards,
     title: post.title,
     description: post.meta_description,
     canonicalPath,
     ogImageUrl: post.og_image_url,
-    ogImageVersion,
     ogType: 'article',
     activeBoardSlug: board.slug,
     keywords: post.meta_keywords,

@@ -280,9 +280,11 @@ api.patch('/posts/:id{[0-9]+}/keywords', async (c) => {
   if (typeof kw !== 'string' || !kw.trim() || kw.length > 500) {
     return c.json({ error: 'invalid_keywords' }, 400);
   }
+  // modified_at 은 일부러 갱신하지 않는다. 키워드는 이미지와 무관하므로
+  // modified_at 을 건드리면 og:image/ sitemap lastmod 가 출렁여 네이버 썸네일 수집이 리셋됨.
   const r = await c.env.DB.prepare(
-    'UPDATE posts SET meta_keywords = ?, modified_at = ? WHERE id = ?'
-  ).bind(kw, new Date().toISOString(), id).run();
+    'UPDATE posts SET meta_keywords = ? WHERE id = ?'
+  ).bind(kw, id).run();
   if (r.meta.changes === 0) return c.json({ error: 'not_found' }, 404);
   return c.json({ id, meta_keywords: kw });
 });

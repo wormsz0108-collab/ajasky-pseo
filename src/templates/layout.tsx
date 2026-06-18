@@ -11,7 +11,6 @@ interface LayoutProps {
   description: string;
   canonicalPath: string;
   ogImageUrl?: string | null;
-  ogImageVersion?: string | number | null;  // og 이미지 캐시버스터(글 수정일 등) — 바뀌면 네이버가 재수집
   ogType?: 'website' | 'article';
   activeBoardSlug?: string | null;
   keywords?: string;
@@ -29,19 +28,16 @@ const PhoneIcon = () => html`
 export function Layout(props: LayoutProps) {
   const {
     site, boards, title, description, canonicalPath,
-    ogImageUrl, ogImageVersion, ogType = 'website', activeBoardSlug, keywords, jsonLd, noindex, children,
+    ogImageUrl, ogType = 'website', activeBoardSlug, keywords, jsonLd, noindex, children,
   } = props;
 
   const fullUrl = `https://${site.domain}${canonicalPath}`;
-  const ogImgBase = absoluteImageUrl(
+  // og:image 는 캐시버스터 없이 안정적인 URL 로 고정한다. 한 번 수집된 썸네일이
+  // 흔들리지 않아야 네이버가 대표 이미지를 붙인다(이미지 교체는 R2 키 변경으로 처리).
+  const ogImg = absoluteImageUrl(
     ogImageUrl || site.og_image_url || `https://${site.domain}/og-default.jpg`,
     site.domain,
   );
-  // 이미지를 같은 키로 덮어써도 네이버/중간 캐시가 옛 이미지를 안 버리는 문제 우회.
-  // 수정일 기반 ?v= 를 붙여 이미지가 바뀌면 URL 도 바뀌게 → 재수집 유도. /media 는 쿼리 무시.
-  const ogImg = ogImageVersion
-    ? `${ogImgBase}${ogImgBase.includes('?') ? '&' : '?'}v=${ogImageVersion}`
-    : ogImgBase;
   const phoneHref = `tel:${site.phone.replace(/-/g, '')}`;
   const theme = pickTheme(site);
 
