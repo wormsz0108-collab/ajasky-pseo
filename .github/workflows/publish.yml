@@ -85,6 +85,9 @@ jobs:
           R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
           WORKER_API:            https://ajasky.co.kr/api/posts
           SITE_DOMAIN:           ajasky.co.kr
+          # 사이트별 지역 분담(미러/카니발 회피). ajasky=shard 0, wormsz1=shard 1.
+          SITE_SHARD:            "0"
+          SHARD_COUNT:           "2"
           PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '1.0' }}
           PUBLISH_BATCH_SIZE:    ${{ inputs.batch_size || '2' }}
         run: python content-pipeline/run_once.py
