@@ -112,6 +112,25 @@ def _pick_board():
     return random.choices(BOARDS, weights=weights, k=1)[0]
 
 
+def _site_owns(region: str) -> bool:
+    """사이트별 지역 분담 (미러/카니발 회피).
+
+    두 사이트가 같은 (region) 페이지를 동시에 만들면 네이버 눈엔 미러이고,
+    노출 한 자리를 자기들끼리 나눠 먹는다(카니발라이제이션). region 을 해시로
+    SHARD_COUNT 등분해 각 사이트가 자기 몫(SITE_SHARD)만 발행하면 겹침이
+    사라지고 두 사이트 합산 커버리지가 사실상 2배가 된다.
+
+    분담은 같은 region 의 모든 보드/longtail 에 일관 적용된다(지역 단위 분할).
+    SITE_SHARD 미설정 시 분담 비활성 → 기존 동작(전 지역) 그대로. 하위호환.
+    이미 발행된 글은 건드리지 않으므로 분담은 '앞으로의 신규 발행'에만 적용된다.
+    """
+    shard = os.environ.get("SITE_SHARD")
+    if not shard:
+        return True
+    count = int(os.environ.get("SHARD_COUNT", "2"))
+    return _djb2(region) % count == int(shard)
+
+
 def pick_target():
     """커버리지 우선 + 레벨 우선순위(시군구 > 법정동) + 보드 검색량 가중.
 
@@ -124,6 +143,11 @@ def pick_target():
     counts 가 비면(조회 실패) 전부 0 동률 → 시군구부터 순수 커버리지로 degrade.
     """
     targets = all_region_targets()
+    # 사이트별 지역 분담: 자기 몫만 후보로. 분담 비활성(SITE_SHARD 미설정)이거나
+    # 분담 결과가 비면(오설정 방어) 전체 지역으로 degrade.
+    owned = [t for t in targets if _site_owns(t[0])]
+    if owned:
+        targets = owned
     counts = _region_counts()
 
     # 법정동 개방 임계값: 모든 시군구/광역이 이 건수 이상이 된 뒤에야 법정동 발행.
