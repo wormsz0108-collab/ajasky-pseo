@@ -238,10 +238,10 @@ def compose_og_panel(
 
     # 하단으로 갈수록 짙어지는 검정 그라데이션 (위쪽 사진은 선명하게 유지)
     grad = Image.new("L", (1, OUT_H), 0)
-    start = int(OUT_H * 0.46)
+    start = int(OUT_H * 0.42)
     for y in range(start, OUT_H):
         t = (y - start) / (OUT_H - start)
-        grad.putpixel((0, y), int(min(1.0, t * 1.15) * 232))
+        grad.putpixel((0, y), int(min(1.0, t * 1.15) * 236))
     grad = grad.resize((OUT_W, OUT_H))
     dark = Image.new("RGB", (OUT_W, OUT_H), (0, 0, 0))
     canvas = Image.composite(dark, base, grad)
@@ -265,11 +265,12 @@ def compose_og_panel(
     # 2) 하단 패널 텍스트 — 지역 → 키워드(밑줄) → 브랜드
     avail = OUT_W - mL - int(OUT_W * 0.07)
 
-    # 지역 (중간 크기, 흰색)
-    pfont = _fit_font(headline_prefix, avail, int(OUT_W * 0.058), min_size=32)
+    # 지역 (아주 큰 글씨, 주인공) — 흰색 + 검정 외곽선으로 또렷하게
+    pfont = _fit_font(headline_prefix, avail, int(OUT_W * 0.175), min_size=80)
     pb = pfont.getbbox(headline_prefix)
-    # 키워드 (큰 글씨)
-    mfont = _fit_font(headline_main, avail, int(OUT_W * 0.135), min_size=60)
+    ph = pb[3] - pb[1]
+    # 키워드 (지역보다 작게, accent 밑줄로 강조 유지)
+    mfont = _fit_font(headline_main, avail, int(OUT_W * 0.10), min_size=56)
     mb = mfont.getbbox(headline_main)
     mh = mb[3] - mb[1]
 
@@ -280,11 +281,12 @@ def compose_og_panel(
 
     # 세로 배치: 아래에서부터 쌓기
     brand_y = int(OUT_H * 0.90)
-    main_y = brand_y - int(mh * 1.18) - int(OUT_W * 0.05)
-    prefix_y = main_y - int((pb[3] - pb[1]) * 1.5)
+    main_y = brand_y - int(mh * 1.18) - int(OUT_W * 0.045)
+    prefix_y = main_y - int(ph * 1.28)
 
-    # 지역
-    draw.text((mL, prefix_y), headline_prefix, font=pfont, fill="#e5e7eb")
+    # 지역 (큰 글씨 + 외곽선)
+    _stroke_text(draw, (mL - pb[0], prefix_y - pb[1]), headline_prefix, pfont,
+                 COLOR_WHITE, COLOR_BLACK, 6)
     # 키워드 + accent 밑줄
     mw = mb[2] - mb[0]
     uy = main_y + mh + int(OUT_W * 0.012)
