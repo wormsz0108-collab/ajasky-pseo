@@ -38,7 +38,12 @@ const THEME_OVERRIDES: Record<string, number> = {
   'ajasky.co.kr': 1, // 블루 (OG도 블루로 재생성). wormsz1.store 등 나머지는 건드리지 않음.
 };
 
+// 도메인 → 테마 인덱스. 파비콘(favicon.ts FAVICONS)도 같은 인덱스를 써서
+// 크롬 색·OG·파비콘이 사이트마다 일관되게 분화된다.
+export function themeIndex(site: { id: number; domain: string }): number {
+  return THEME_OVERRIDES[site.domain] ?? site.id % THEMES.length;
+}
+
 export function pickTheme(site: { id: number; domain: string }): Theme {
-  const idx = THEME_OVERRIDES[site.domain] ?? site.id % THEMES.length;
-  return THEMES[idx];
+  return THEMES[themeIndex(site)];
 }

@@ -9,7 +9,8 @@ import {
 } from './seo/sitemap';
 import { renderRobots } from './seo/robots';
 import { renderRss } from './seo/rss';
-import { FAVICON_PNG } from './favicon';
+import { FAVICONS } from './favicon';
+import { themeIndex } from './templates/theme';
 import { buildThumbnailText } from './lib/thumbnail-text';
 import { parseBodyMarkdown } from './lib/markdown';
 import { pickBodyPhotos } from './lib/body-photos';
@@ -92,12 +93,13 @@ app.get('/media/:key{.+}', async (c) => {
   return new Response(obj.body, { headers });
 });
 
-// 파비콘 (Worker 내장 — 전 도메인 공통). /favicon.ico, /favicon.png 모두 PNG로 서빙.
-const faviconResponse = () => new Response(FAVICON_PNG, {
+// 파비콘 (Worker 내장 — 사이트 테마별 색). ajasky.co.kr=블루, wormsz1.store 등=핑크.
+// /favicon.ico, /favicon.png 모두 PNG로 서빙.
+const faviconResponse = (site: Site) => new Response(FAVICONS[themeIndex(site)], {
   headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=2592000, immutable' },
 });
-app.get('/favicon.ico', () => faviconResponse());
-app.get('/favicon.png', () => faviconResponse());
+app.get('/favicon.ico', (c) => faviconResponse(c.get('site')));
+app.get('/favicon.png', (c) => faviconResponse(c.get('site')));
 
 // 홈·보드 등 글이 아닌 페이지의 OG 폴백 이미지.
 // 정적 og-default.jpg 파일은 존재하지 않으므로(과거 404 원인), 발행된 글의
