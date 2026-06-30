@@ -112,23 +112,44 @@ def _pick_board():
     return random.choices(BOARDS, weights=weights, k=1)[0]
 
 
+# 사이트별 지역 분담 (미러/카니발 회피) — 가치 기반 분할.
+# 기존 해시 등분(djb2 % N)은 커버리지는 2배로 늘리지만 가치 높은 본진(서울 광역 등)이
+# 만료 임박 도메인으로 새는 문제가 있었다. 도메인 수명이 다르므로 가치순으로 배정한다:
+#   shard 0 (ajasky, 2년·장기 보유): 수도권(서울·경기·인천) + 충청(대전·세종·충북·충남)
+#                                    + 지방 광역시(부산·대구·광주·울산) — 검색량 본진 전부.
+#   shard 1 (wormsz1, 6개월·소모품) : 전북·전남·경북·경남 (도 단위) — 소모성으로 커버.
+# 제주·강원은 발행 권역 자체에서 제외(regions.all_region_targets)되어 어느 쪽에도 안 들어온다.
+# 광역 단위로 분담 → 같은 지역의 모든 시군구/법정동/보드/longtail 에 일관 적용(미러 0).
+_SHARD0_PARENTS = {
+    "서울", "경기", "인천", "대전", "세종", "충북", "충남",  # 수도권 + 충청(풀커버 본진)
+    "부산", "대구", "광주", "울산",                          # 지방 광역시
+}
+
+
+def _region_parent(region: str) -> str:
+    """지역 라벨에서 광역 부모를 추출. '서울 강남구 청담동' → '서울'.
+
+    '경기 광주시'는 광주광역시 혼동 방지로 '경기도광주'(공백 없는 한 덩어리)로
+    정규화돼 있으므로 별도로 수도권(경기)으로 매핑한다. '광주 동구' 등 공백 라벨은
+    광주광역시 → split 으로 '광주' 추출되어 _SHARD0_PARENTS 에 자연 매칭.
+    """
+    if region.startswith("경기도광주"):
+        return "경기"
+    return region.split(" ", 1)[0]
+
+
 def _site_owns(region: str) -> bool:
     """사이트별 지역 분담 (미러/카니발 회피).
 
-    두 사이트가 같은 (region) 페이지를 동시에 만들면 네이버 눈엔 미러이고,
-    노출 한 자리를 자기들끼리 나눠 먹는다(카니발라이제이션). region 을 해시로
-    SHARD_COUNT 등분해 각 사이트가 자기 몫(SITE_SHARD)만 발행하면 겹침이
-    사라지고 두 사이트 합산 커버리지가 사실상 2배가 된다.
-
-    분담은 같은 region 의 모든 보드/longtail 에 일관 적용된다(지역 단위 분할).
     SITE_SHARD 미설정 시 분담 비활성 → 기존 동작(전 지역) 그대로. 하위호환.
     이미 발행된 글은 건드리지 않으므로 분담은 '앞으로의 신규 발행'에만 적용된다.
+    (구 SHARD_COUNT 해시 등분 방식은 가치 기반 배정으로 대체됨 — SHARD_COUNT 미사용.)
     """
     shard = os.environ.get("SITE_SHARD")
     if not shard:
         return True
-    count = int(os.environ.get("SHARD_COUNT", "2"))
-    return _djb2(region) % count == int(shard)
+    owner = 0 if _region_parent(region) in _SHARD0_PARENTS else 1
+    return owner == int(shard)
 
 
 def pick_target():
