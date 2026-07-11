@@ -103,15 +103,16 @@ app.get('/favicon.png', (c) => faviconResponse(c.get('site')));
 
 // 홈·보드 등 글이 아닌 페이지의 OG 폴백 이미지.
 // 정적 og-default.jpg 파일은 존재하지 않으므로(과거 404 원인), 발행된 글의
-// 이미 구워진 OG(/media/og/sN/…) 중 하나를 랜덤으로 골라 R2에서 그대로 스트리밍한다.
-// site 컨텍스트로 도메인별 글에서 고르므로 ajasky·wormsz1 등 각 사이트에 맞게 노출됨.
+// 이미 구워진 OG(/media/og/sN/…) 중 하나를 골라 R2에서 그대로 스트리밍한다.
+// 네이버는 안정된 OG 이미지라야 썸네일이 정착하므로 결정적 선택(가장 오래된 글) 고정 —
+// 랜덤이면 스크랩 때마다 다른 이미지가 잡혀 홈 썸네일이 영영 안정화되지 않는다.
 app.get('/og-default.jpg', async (c) => {
   const site = c.get('site');
   const row = await c.env.DB.prepare(
     `SELECT og_image_url FROM posts
      WHERE site_id = ? AND status = 'published'
        AND og_image_url IS NOT NULL AND og_image_url LIKE '/media/og/%'
-     ORDER BY RANDOM() LIMIT 1`
+     ORDER BY id LIMIT 1`
   ).bind(site.id).first<{ og_image_url: string }>();
 
   const key = row?.og_image_url?.replace(/^\/media\//, '');
@@ -122,8 +123,8 @@ app.get('/og-default.jpg', async (c) => {
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   headers.set('content-type', 'image/jpeg');
-  // OG 스크래퍼가 한 번 가져가면 캐시하므로 1시간 엣지 캐시. 매 스크랩마다 랜덤 1장.
-  headers.set('cache-control', 'public, max-age=3600');
+  // 항상 같은 이미지이므로 길게 캐시 (하루). 교체가 필요하면 대상 글의 R2 키를 바꾼다.
+  headers.set('cache-control', 'public, max-age=86400');
   return new Response(obj.body, { headers });
 });
 
