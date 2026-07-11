@@ -124,7 +124,7 @@ ${children}
     </div>
   </div>
   <div class="f-biz">
-    <p>상호 ${site.site_name} · 대표자 윤재근 · 사업자등록번호 808-57-00602</p>
+    <p>상호 ${site.site_name} · 사업자등록번호 808-57-00602</p>
   </div>
 </footer>
 
