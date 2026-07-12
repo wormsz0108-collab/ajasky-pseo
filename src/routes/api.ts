@@ -73,6 +73,15 @@ api.post('/posts', async (c) => {
   const err = validate(body);
   if (err) return c.json({ error: 'validation_error', detail: err }, 400);
 
+  // Gemini 출력에 간혹 섞이는 제어문자(\x08 등) 제거 — RSS/sitemap XML 파싱 실패와
+  // SERP title 오염의 원인이었음 (파이프라인 쪽 방어와 이중화).
+  const stripCtl = (s: string) => s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  const mutable = body as unknown as Record<string, unknown>;
+  for (const k of ['slug', 'title', 'region', 'meta_description', 'meta_keywords', 'body_md', 'toc_json', 'faq_json']) {
+    const v = mutable[k];
+    if (typeof v === 'string') mutable[k] = stripCtl(v);
+  }
+
   const site = await c.env.DB.prepare('SELECT id, domain FROM sites WHERE domain = ?')
     .bind(body.site_domain).first<{ id: number; domain: string }>();
   if (!site) return c.json({ error: 'site_not_found', detail: body.site_domain }, 404);

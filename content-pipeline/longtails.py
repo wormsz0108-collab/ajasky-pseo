@@ -485,10 +485,14 @@ LONGTAILS_BY_BOARD = {
 }
 
 
-# 작업종류 longtail 을 모든 보드 풀에 공통 추가 (보드당 30 → 30 + 약 80 = 약 110)
-# 1,785 동읍면 × 8 보드 × 110 longtail = 1.57M 페이지 풀.
+# 작업종류 longtail 공통 추가 — 단, 가격 인텐트 보드(요금·비용·가격·이용료)는 제외.
+# '○○동 스카이차 요금, 피아노 양중 작업의 진행 흐름'처럼 제목 앞(가격 의도)과
+# 뒤(작업 절차)가 어긋나는 조합이 요금계 발행의 다수를 차지하던 문제 —
+# 가격 보드는 자체 비용 관점 풀(+BOARD_EXTRA)만 사용해 검색 의도를 일치시킨다.
+_PRICE_INTENT_BOARDS = {"스카이차 요금", "스카이차 비용", "스카이차 가격", "스카이차 이용료"}
 for _board, _longtails in LONGTAILS_BY_BOARD.items():
-    _longtails.extend(WORK_TYPE_LONGTAILS)
+    if _board not in _PRICE_INTENT_BOARDS:
+        _longtails.extend(WORK_TYPE_LONGTAILS)
 
 
 # 보드별 고유 각도 추가 — 레퍼런스(safetyfirstskycar) 토픽을 우리 어휘로 변형.

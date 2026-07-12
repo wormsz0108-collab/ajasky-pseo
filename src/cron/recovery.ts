@@ -58,7 +58,9 @@ async function recoverSite(
     return;
   }
 
-  const batchSize = Math.min(MAX_BATCH, gap);
+  // gap-2 안전마진: 직후 도래할 schedule cron 과 겹쳐 일 페이스(50건)를 초과 발행하던
+  // race 완화 (실측: recovery dispatch 와 schedule run 이 13초 간격 동시 실행된 이력).
+  const batchSize = Math.min(MAX_BATCH, Math.max(1, gap - 2));
   await dispatchWorkflow(env, site, batchSize);
 }
 
@@ -89,18 +91,18 @@ async function countActiveRuns(env: Env, workflow: string): Promise<number> {
   return total;
 }
 
-async function dispatchWorkflow(env: Env, site: SiteConfig, batchSize: number): Promise<void> {
+async function dispatchWorkflow(env: Env, site: SiteConfig, batchSize: number, retried = false): Promise<void> {
+  const headers = {
+    'Authorization': `Bearer ${env.GITHUB_DISPATCH_TOKEN}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'ajasky-recovery',
+  };
   const resp = await fetch(
     `https://api.github.com/repos/${REPO}/actions/workflows/${site.workflow}/dispatches`,
     {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.GITHUB_DISPATCH_TOKEN}`,
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'ajasky-recovery',
-        'Content-Type': 'application/json',
-      },
+      headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ref: BRANCH,
         inputs: {
@@ -113,8 +115,22 @@ async function dispatchWorkflow(env: Env, site: SiteConfig, batchSize: number): 
 
   if (resp.status === 204) {
     console.log(`[recovery] ${site.domain} dispatched ${site.workflow} batch=${batchSize}`);
-  } else {
-    const text = await resp.text();
-    console.error(`[recovery] ${site.domain} dispatch failed: ${resp.status} ${text}`);
+    return;
   }
+
+  const text = await resp.text();
+  // GitHub 은 60일 무활동 repo 의 schedule 워크플로를 자동 비활성화 — 그대로 두면
+  // 발행이 소리 없이 전면 정지하고 dispatch 도 403 으로 막힌다. enable 후 1회 재시도.
+  if (!retried && resp.status === 403 && /disabled/i.test(text)) {
+    const en = await fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/${site.workflow}/enable`,
+      { method: 'PUT', headers }
+    );
+    if (en.status === 204) {
+      console.log(`[recovery] ${site.domain} workflow re-enabled, retrying dispatch`);
+      return dispatchWorkflow(env, site, batchSize, true);
+    }
+    console.error(`[recovery] ${site.domain} workflow enable failed: ${en.status}`);
+  }
+  console.error(`[recovery] ${site.domain} dispatch failed: ${resp.status} ${text}`);
 }

@@ -40,6 +40,18 @@ export function cityOf(region: string): string {
   return parts[1] || parts[0] || '';
 }
 
+// cityOf + 중복 자치구 광역 접두 구분. 내부링크 칩 키·라벨용.
+//   "대전 중구 은행동" → "대전 중구" (서울/인천/대전/대구/부산/울산 중구 충돌 방지)
+//   "경기 수원시 남수동" → "수원시", "경기 광주시" → "경기도광주"
+export function cityDispOf(region: string): string {
+  const parts = region.trim().split(/\s+/);
+  if (parts[0] === '경기도광주') return '경기도광주';
+  const prov = parts[0] ?? '';
+  const city = parts[1] ?? '';
+  if (!city) return prov;
+  return cityDisp(prov, city);
+}
+
 // 여러 시에 중복되는 일반 자치구명 — leaf 단독 사용 시 혼동되므로 시(광역) 접두.
 const AMBIGUOUS_GU = new Set(['동구', '서구', '남구', '북구', '중구']);
 

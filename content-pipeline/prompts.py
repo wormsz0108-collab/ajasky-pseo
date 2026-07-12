@@ -39,7 +39,7 @@ COMMON_RULES = """엄수 규칙:
 15. **제목은 반드시 "{leaf} {board}" 로 시작** — 상위 광역/시·군명(예: "서울 강남구")은 제목 앞에 절대 붙이지 말 것. 최말단 지명({leaf})만 맨 앞에. 네이버는 제목 앞쪽 키워드에 더 높은 가중치 부여. longtail 은 콜론/대시 뒤에 위치. 키워드 단어 분해/도치 절대 금지.
 16. **각 h2·h3 제목도 "{leaf} …" 로 시작** — 헤딩 앞에 상위 광역/시·군명 붙이지 말 것.
 17. **가독성·전문성**: 한 단락 2~4문장. 전문 용어는 한 번 쉽게 풀어 설명. 과장·감탄·광고체 대신 현장 기준·수치 범위로 신뢰감. 읽는 사람이 한눈에 핵심을 잡게 구성
-18. **날씨 이야기 절대 금지** — 날씨·기온·계절·비·눈·바람·미세먼지·우천 등 기상 화제 언급 금지 ("○○동 날씨" 같은 무관한 검색 유입 방지). 작업 안전 관련도 기상 표현 대신 "현장 여건"으로 일반화
+18. **날씨 이야기 절대 금지** — 날씨·기온·계절·비·눈·바람·미세먼지·우천 등 기상 화제 언급 금지 ("○○동 날씨" 같은 무관한 검색 유입 방지). 작업 안전 관련도 기상 표현 대신 "현장 여건"으로 일반화. 단, longtail 이 고드름·적설·태풍 후 정비 등 '작업 종류'인 경우 그 작업 자체의 서술은 허용 — 날씨 잡담·예보·기온 서술만 금지
 19. **야간·주말·새벽 작업은 주간과 금액 기준이 다름을 명시** — "주간과 동일한 기준", "야간에도 추가 요금 없이" 같은 표현 절대 금지. 야간/주말 질문에 답할 때는 반드시 "할증이 적용될 수 있습니다" 방향으로 안내
 
 출력 형식: JSON 한 객체. JSON 외 텍스트 절대 금지.
@@ -93,35 +93,41 @@ def _case_body_outline(region: str, board: str, longtail: str, n: int, syn: dict
 
 
 def _procedural_body_outline(region: str, board: str, longtail: str, n: int, syn: dict) -> str:
-    """절차 중심형. 의뢰부터 마무리까지 시간순."""
+    """절차 중심형. 의뢰부터 마무리까지 시간순.
+
+    단계 헤딩은 diversity.SECTION_SYNONYMS(proc_*)에서 매 글 변형 — 고정 문자열이
+    전 사이트 축어 반복되면 네이버 D.I.A. 구조 반복 시그널이 된다. 지역명도 삽입해
+    '헤딩은 지역명으로 시작' 규칙과 정합."""
     return f"""구조 (h2 {n}개) — 단계별 절차:
 ## 1. {region} {board} {syn['intro']}                    ← 도입, {longtail} 자연 삽입
-## 2. 사진 전송과 견적 문의                                ← 첫 단계
+## 2. {region} {syn['proc_photo']}                        ← 첫 단계
   ### 사진 잘 찍는 법 (번호 리스트)
-## 3. 현장 사전 점검                                       ← 둘째 단계
+## 3. {region} {syn['proc_precheck']}                     ← 둘째 단계
   ### 체크리스트 (불릿 리스트)
-## 4. 작업 당일                                             ← 셋째 단계
+## 4. {syn['proc_day']}                                   ← 셋째 단계
   ### 도착부터 시작까지 (번호 리스트)
-## 5. 작업 중                                              ← 넷째 단계
+## 5. {syn['proc_during']}                                ← 넷째 단계
   ### 안전 점검 항목 (불릿 리스트)
-## 6. 작업 후 마무리                                       ← 다섯째 단계
+## 6. {syn['proc_after']}                                 ← 다섯째 단계
   ### 정리 단계 (불릿 리스트)
-## 7. 비용과 결제                                          ← {longtail} 자연 삽입
+## 7. {syn['proc_payment']}                               ← {longtail} 자연 삽입
 ## {n - 1}. {syn['faq']}                                  ← Q/A 5~6쌍
 ## {n}. {syn['region']}                                   ← {region} 인근 시군구"""
 
 
 def _qa_body_outline(region: str, board: str, longtail: str, n: int, syn: dict) -> str:
-    """Q&A 중심형. 본문 자체가 큰 질문 7개."""
-    n_q = max(5, n - 2)
+    """Q&A 중심형. 본문 자체가 큰 질문 7개.
+
+    질문 문구는 diversity.SECTION_SYNONYMS(qa_*)에서 매 글 변형 + 지역명 삽입 —
+    고정 질문이 전 사이트 축어 반복되던 것 방지."""
     return f"""구조 (h2 {n}개) — Q&A 중심. 본문 각 h2가 하나의 큰 질문:
 ## 1. {region} {board} {syn['intro']}                    ← 도입, {longtail} 자연 삽입
-## 2. Q. {region}에서 어떤 차종을 골라야 하나요?
-## 3. Q. 현장 사진은 어떻게 찍어야 정확한 견적이 나오나요?
-## 4. Q. 견적은 어떤 요소로 결정되나요?
-## 5. Q. 야간/주말 작업도 가능한가요?
-## 6. Q. 협소 골목·고층 외벽 작업은 어떻게 진행되나요?
-## 7. Q. 작업 안전은 어떻게 확보되나요?                    ← {longtail} 자연 삽입
+## 2. Q. {region}에서 {syn['qa_car']}
+## 3. Q. {region} {syn['qa_photo']}
+## 4. Q. {region} {syn['qa_quote']}
+## 5. Q. {region}에서 {syn['qa_night']}
+## 6. Q. {region} {syn['qa_narrow']}
+## 7. Q. {region} {syn['qa_safety']}                      ← {longtail} 자연 삽입
 ## {n - 1}. {syn['faq']}                                  ← 추가 Q/A 3~4쌍 (위와 중복 X)
 ## {n}. {syn['region']}                                   ← {region} 인근 시군구"""
 
@@ -176,6 +182,8 @@ def build_prompt(region: str, board: str, longtail: str) -> tuple[str, dict]:
             "case_intro", "case_lesson",
             "comparison_a", "comparison_b", "comparison_choice",
             "qa_block",
+            "proc_photo", "proc_precheck", "proc_day", "proc_during", "proc_after", "proc_payment",
+            "qa_car", "qa_photo", "qa_quote", "qa_night", "qa_narrow", "qa_safety",
         )
     }
 

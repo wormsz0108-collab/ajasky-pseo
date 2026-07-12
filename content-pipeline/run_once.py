@@ -384,6 +384,9 @@ def publish_one(idx: int = 0, max_retries: int = 5) -> bool:
         try:
             result = publish(payload)
         except Exception as e:
+            # 401 은 재시도해도 같은 결과 — Gemini 재생성 낭비 없이 즉시 중단.
+            if "unauthorized" in str(e).lower():
+                raise
             print(f"[#{idx}.{attempt+1}] publish failed: {e}", file=sys.stderr)
             continue
 
@@ -416,6 +419,23 @@ def _slug_exists(board_slug: str, slug: str) -> bool:
 
 def main():
     print(f"[run] start {datetime.now(timezone.utc).isoformat()}")
+
+    # Worker 가용성·토큰 사전 체크 — 장애/토큰 오설정 시 Gemini 생성 없이 즉시 중단.
+    # (없으면 실패 run 마다 배치×5회 재생성 = 하루 최대 ~250회 Gemini 쿼터 낭비)
+    api_base = os.environ.get("WORKER_API", "https://ajasky.co.kr/api/posts").rsplit("/", 1)[0]
+    try:
+        r = _requests.get(
+            f"{api_base}/ping",
+            headers={"Authorization": f"Bearer {os.environ.get('WORKER_API_TOKEN', '')}"},
+            timeout=15,
+        )
+        if r.status_code == 401:
+            print("[abort] WORKER_API_TOKEN unauthorized — 생성 없이 중단", file=sys.stderr)
+            sys.exit(4)
+        r.raise_for_status()
+    except _requests.RequestException as e:
+        print(f"[abort] Worker unreachable: {e} — 생성 없이 중단", file=sys.stderr)
+        sys.exit(3)
 
     # 매 cron 트리거마다 N건 발행 (PUBLISH_BATCH_SIZE).
     # 기본 1. 페이스 확장 시 2~3으로 올려 한 번에 여러 글 발행.

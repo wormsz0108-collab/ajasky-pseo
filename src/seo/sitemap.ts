@@ -2,8 +2,10 @@ import type { Env, Site } from '../types';
 
 export const POSTS_PER_SITEMAP = 1000;
 
+// XML 1.0 불법 제어문자(\x08 등) 제거 — rss.ts 와 동일 방어.
 const xmlEscape = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
 const urlFor = (site: Site, path: string) =>

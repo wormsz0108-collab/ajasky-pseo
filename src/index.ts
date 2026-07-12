@@ -16,7 +16,7 @@ import { parseBodyMarkdown } from './lib/markdown';
 import { pickBodyPhotos } from './lib/body-photos';
 import { NotFoundPage } from './templates/notfound';
 import apiRoutes from './routes/api';
-import { cityOf, leafify } from './lib/regions';
+import { cityDispOf, leafify } from './lib/regions';
 import {
   buildDummyPost, buildDummySections, buildDummyFaq,
 } from './lib/dummy';
@@ -30,6 +30,28 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use('*', async (c, next) => {
   const rawHost = c.req.header('host') ?? '';
   const host = rawHost.split(':')[0].toLowerCase();
+  const isDevHost = host === 'localhost' || host === '127.0.0.1';
+
+  // SEO 정규화 301: www → apex, http → https, trailing slash 제거.
+  // 네이버가 호스트/프로토콜/슬래시 변형을 별도 URL 로 수집해 신호가 분산되고
+  // (http 200 · www 404 · slash 404 실측) 백링크가 유실되던 문제의 일괄 해결.
+  if (!isDevHost) {
+    const url = new URL(c.req.url);
+    let redirect = false;
+    if (host.startsWith('www.')) {
+      url.hostname = host.slice(4);
+      redirect = true;
+    }
+    if (url.protocol === 'http:') {
+      url.protocol = 'https:';
+      redirect = true;
+    }
+    if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
+      url.pathname = url.pathname.replace(/\/+$/, '');
+      redirect = true;
+    }
+    if (redirect) return c.redirect(url.toString(), 301);
+  }
 
   let site = await c.env.DB.prepare('SELECT * FROM sites WHERE domain = ?')
     .bind(host)
@@ -187,7 +209,9 @@ app.get('/:boardSlug', async (c) => {
   if (!board) return c.notFound();
 
   const boards = await getBoards(c.env, site.id);
-  const page = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
+  // parseInt('abc')=NaN 이 D1 bind 로 흘러 500 나던 것 방어 — 비숫자는 1페이지.
+  const pageRaw = parseInt(c.req.query('page') ?? '1', 10);
+  const page = Number.isFinite(pageRaw) ? Math.max(1, pageRaw) : 1;
   const offset = (page - 1) * POSTS_PER_PAGE;
 
   const { results: postRows } = await c.env.DB.prepare(
@@ -295,10 +319,12 @@ function renderPost(opts: {
 
   // "서비스 지역" 칩 = 같은 보드의 실제 인근 지역 글로 내부링크 (시군구 1개당 1글, 최대 24).
   // 기존엔 50개가 전부 보드 목록으로 링크 → 색인/내부링크 시그널 약했음.
-  const seenCity = new Set<string>([cityOf(post.region)]);
+  // cityDispOf: 동/서/남/북/중구는 "대전 중구"처럼 광역 접두 — 6개 광역시 동명 구가
+  // 하나로 dedupe 되어 내부링크를 영영 못 받던 충돌 방지 + 앵커텍스트 지역 명확화.
+  const seenCity = new Set<string>([cityDispOf(post.region)]);
   const regionChips: { name: string; href: string }[] = [];
   for (const r of pool) {
-    const city = cityOf(r.region);
+    const city = cityDispOf(r.region);
     if (!city || seenCity.has(city)) continue;
     seenCity.add(city);
     regionChips.push({
