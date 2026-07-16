@@ -86,10 +86,8 @@ jobs:
           R2_SECRET_ACCESS_KEY:  ${{ secrets.R2_SECRET_ACCESS_KEY }}
           WORKER_API:            https://wormsz1.store/api/posts
           SITE_DOMAIN:           wormsz1.store
-          # 사이트별 지역 분담(미러/카니발 회피) — 가치 기반(run_once._SHARD0_PARENTS).
-          # shard 0 = ajasky(장기 보유): 수도권+충청+지방광역시(부산·대구·광주·울산).
-          # shard 1 = wormsz1(만료 임박): 전북·전남·경북·경남(도 단위)만.
-          SITE_SHARD:            "1"
+          # SITE_SHARD 제거 (2026-07-16 사장님) — 두 사이트 모두 전국 발행(제주 제외).
+          # 지역 분담 코드는 run_once 에 휴면 유지 (env 미설정 = 전 지역).
           PUBLISH_PROBABILITY:   ${{ inputs.force_run == 'true' && '1.0' || '1.0' }}
           PUBLISH_BATCH_SIZE:    ${{ inputs.batch_size || '2' }}
         run: python content-pipeline/run_once.py

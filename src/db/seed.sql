@@ -4,6 +4,9 @@
 INSERT OR IGNORE INTO sites (id, domain, site_name, phone) VALUES
   (1, 'ajasky.co.kr', '아자스카이', '010-9249-0510');
 
+-- 보드 11개 = 초기 8 + 신규 3 (2026-07-16 사장님 확정, 검색량 실측).
+-- 옛 3종(일대·요금·이용료)은 기존 글 6,300여 개의 URL·보드 라벨 보존을 위해 불변 유지,
+-- 신규 발행만 신규 3종(임대·업체·근처)으로 진행 (content-pipeline/run_once.py BOARDS).
 INSERT OR IGNORE INTO boards (site_id, slug, title, display_order) VALUES
   (1, '스카이차',         '스카이차',         1),
   (1, '스카이차-일대',     '스카이차 일대',     2),
@@ -12,4 +15,7 @@ INSERT OR IGNORE INTO boards (site_id, slug, title, display_order) VALUES
   (1, '스카이차-비용',     '스카이차 비용',     5),
   (1, '스카이차-가격',     '스카이차 가격',     6),
   (1, '스카이차-이용료',   '스카이차 이용료',   7),
-  (1, '고소작업차량',      '고소작업차량',      8);
+  (1, '고소작업차량',      '고소작업차량',      8),
+  (1, '스카이차-임대',     '스카이차 임대',     9),
+  (1, '스카이차-업체',     '스카이차 업체',    10),
+  (1, '근처-스카이차',     '근처 스카이차',    11);

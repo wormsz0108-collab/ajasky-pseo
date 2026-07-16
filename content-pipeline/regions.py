@@ -84,53 +84,40 @@ def _disambiguate(label: str) -> str:
 def all_region_targets():
     """발행 대상 지역. (region_label, region_type) 리스트.
 
-    서비스 권역 (2026-06 확장 — 충청권 전역 추가):
-      서울·경기·인천 전역 + 대전·세종 + 충북·충남 전역.
-      (경기 작업권 제한은 네이버 블로그 키워드 자료용이지 이 사이트 발행과 무관.)
-
-    3단계 레벨 모두 포함:
-      광역    (서울, 경기, 인천, 대전, 세종, 충북, 충남)
-      시군구  (서울 강남구, 충북 제천시 ...)
-      법정동  (서울 강남구 청담동 ...)  ← region_dongs.py 추출분.
-              동단위: 대전·충남 전역 OK. 충북은 청주·충주만, 세종은 동데이터 없음
-              → 나머지는 시·군 단위 키워드만 (PDF 재추출 시 채워짐).
+    발행 권역 (2026-07-16 사장님 확정 — 전국 발행, ajasky·wormsz1 공통):
+      시군구  : 전국 모든 시·군·구 (REGIONS_BY_LEVEL["시군구"] 전체 — 강원 포함).
+                중복 지명(동/서/남/북/중/강서구, 고성군 등 — 2개+ 상위 시·도에 중복되는
+                시군구를 데이터에서 자동판정)은 keyword_variants._ambiguous_gu() 가
+                "부산 동구"/"강원 고성군"처럼 상위 접두를 붙여 구분
+                → 제목/슬러그/OG 모두 안전. (전국 유일 시군구는 접두 없이 leaf 유지)
+      법정동  : region_dongs.py 추출분 전부 (현재 데이터 보유: 서울·경기·인천·
+                대전·세종·충북·충남. 나머지 권역은 PDF 재추출 시 자동 편입).
+      제외    : ① 제주도 전부(제주시·서귀포시와 하위 동읍면 — 사장님 목록에 없음)
+                ② 광역 단독(서울/경기 등 1토큰) 페이지 — 신규 발행 중단.
+                   기존 발행분(광역 글)은 불변 — 발행 후보에서만 빠짐.
     """
-    INCLUDE_FULL_REGIONS = {"서울", "경기", "인천", "대전", "세종", "충북", "충남"}
-
-    # 시·군·구 단위만 추가 발행하는 권역 (2026-06 확장 — 제주 제외 전국 나머지).
-    #   광역 단독 페이지·법정동은 만들지 않고 시군구 레벨만 발행.
-    #   중복 구(동/서/남/북/중/강서구 등 — 데이터에서 2개+ 시에 중복되는 구를 자동판정)는
-    #   keyword_variants._ambiguous_gu() 가 "부산 동구"처럼 시 접두를 붙여 구분
-    #   → 제목/슬러그/OG 모두 안전. (전국 유일 구는 접두 없이 leaf 유지)
-    INCLUDE_SIGUNGU_ONLY = {
-        "부산", "대구", "광주", "울산", "전북", "전남", "경북", "경남",
-    }  # 제주·강원 제외
-
     out = []
 
-    # 1) 광역 (전체 3단계 권역만 — 시군구만 권역은 광역 단독 페이지 없음)
-    for r in REGIONS_BY_LEVEL["광역"]:
-        if r in INCLUDE_FULL_REGIONS:
-            out.append((r, "광역"))
-
-    # 2) 시군구 (전체 권역 + 시군구만 권역)
+    # 1) 시군구 — 전국 전체 (광역 단독은 발행하지 않음)
     for parent, children in REGIONS_BY_LEVEL["시군구"].items():
-        if parent in INCLUDE_FULL_REGIONS or parent in INCLUDE_SIGUNGU_ONLY:
-            for c in children:
-                out.append((f"{parent} {c}", "시군구"))
+        for c in children:
+            out.append((f"{parent} {c}", "시군구"))
 
-    # 3) 법정동 (PDF 추출, region_dongs.py)
+    # 2) 법정동 (PDF 추출, region_dongs.py — 데이터 보유 권역 전부)
     #    세분화 동(소사본동/상도1동/성수1가 등)은 대표 동으로 정규화 후 dedupe.
     try:
         from region_dongs import REGION_DONGS
         from dong_normalize import normalize_city_dongs
         for parent_label, cities in REGION_DONGS.items():
-            if parent_label in INCLUDE_FULL_REGIONS:
-                for city, dongs in cities.items():
-                    for dong in normalize_city_dongs(dongs):
-                        out.append((f"{parent_label} {city} {dong}", "법정동"))
+            for city, dongs in cities.items():
+                for dong in normalize_city_dongs(dongs):
+                    out.append((f"{parent_label} {city} {dong}", "법정동"))
     except ImportError:
         pass  # PDF 추출 안 됐을 때 안전 fallback
 
-    # 경기 광주시 → "경기도광주" 로 통일 (광주광역시 혼동 방지)
-    return [(_disambiguate(label), rtype) for (label, rtype) in out]
+    # 제주 제외 + 경기 광주시 → "경기도광주" 로 통일 (광주광역시 혼동 방지)
+    return [
+        (_disambiguate(label), rtype)
+        for (label, rtype) in out
+        if not label.startswith("제주")
+    ]

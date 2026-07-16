@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS sites (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- boards: 게시판 (사이트별 8개)
+-- boards: 게시판 (사이트별 11개 = 기존 8 + 신규 3)
 CREATE TABLE IF NOT EXISTS boards (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   site_id INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,

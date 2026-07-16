@@ -39,23 +39,25 @@ def _tokenize_region(region: str) -> dict[str, str]:
     return {"province": region, "city": "", "dong": ""}
 
 
-# 여러 시(도시)에 중복되는 자치구명 → leaf 단독으로 쓰면 제목/H1/OG 가 도시 간 완전중복.
+# 여러 시(도시)에 중복되는 시군구명 → leaf 단독으로 쓰면 제목/H1/OG 가 지역 간 완전중복.
 # 하드코딩하지 않고 '실제 발행 대상 전체'(regions.all_region_targets — 시군구 + 법정동,
-# region_dongs/merge_admin_dongs 반영분 포함)에서 같은 '…구' 이름이 서로 다른 상위
-# 시(도시) 2곳 이상에 등장하면 '중복 구'로 자동 판정하여 시 접두를 붙인다.
+# region_dongs/merge_admin_dongs 반영분 포함)에서 같은 '…구/…군' 이름이 서로 다른 상위
+# 시(도시/도) 2곳 이상에 등장하면 '중복 시군구'로 자동 판정하여 상위 접두를 붙인다.
 #   예) 강서구(서울·부산), 중구(서울·부산·대구·인천·대전·울산), 북구(부산·대구·광주·울산),
-#       서구/남구/동구 … → "서울 강서구", "부산 중구" 처럼 구분.
-#   전국 유일 구(강남구·수지구·분당구 등)는 1개 시에만 있어 접두 없이 leaf 유지.
-# 상위 시 표기는 데이터가 이미 광역 접미사 없는 짧은 형태(서울/부산)라 그대로 사용.
+#       고성군(강원·경남 — 2026-07-16 전국 확장으로 편입) …
+#       → "서울 강서구", "부산 중구", "강원 고성군" 처럼 구분.
+#   전국 유일 시군구(강남구·수지구·가평군 등)는 1곳에만 있어 접두 없이 leaf 유지.
+# 상위 표기는 데이터가 이미 광역 접미사 없는 짧은 형태(서울/부산/강원)라 그대로 사용.
 # 순환 import·모듈로드 비용 회피를 위해 최초 사용 시 1회 런타임 계산·캐시.
 _AMBIGUOUS_GU_CACHE: set[str] | None = None
 
 
 def _ambiguous_gu() -> set[str]:
-    """발행 대상 데이터에서 2개 이상 상위 시(도시)에 중복 등장하는 자치구(…구) 집합.
+    """발행 대상 데이터에서 2개 이상 상위 시(도시/도)에 중복 등장하는 시군구(…구/…군) 집합.
 
-    같은 구 이름이 서로 다른 상위 토큰(시/광역시) 밑에 2번 이상 나타나면 중복으로 본다.
+    같은 이름이 서로 다른 상위 토큰(시/광역시/도) 밑에 2번 이상 나타나면 중복으로 본다.
     'i > 0' 조건으로 '대구'처럼 자체가 '구'로 끝나는 광역 접두 토큰은 후보에서 제외.
+    ('…시'는 전국적으로 유일해 검사 불필요 — 경기 광주시만 특례로 별도 처리.)
     """
     global _AMBIGUOUS_GU_CACHE
     if _AMBIGUOUS_GU_CACHE is None:
@@ -64,7 +66,7 @@ def _ambiguous_gu() -> set[str]:
         for label, _rtype in all_region_targets():
             toks = label.split()
             for i, tok in enumerate(toks):
-                if i > 0 and tok.endswith("구"):
+                if i > 0 and tok.endswith(("구", "군")):
                     parents.setdefault(tok, set()).add(toks[i - 1])
         _AMBIGUOUS_GU_CACHE = {gu for gu, provs in parents.items() if len(provs) >= 2}
     return _AMBIGUOUS_GU_CACHE
@@ -73,7 +75,8 @@ def _ambiguous_gu() -> set[str]:
 def _city_disp(prov: str, city: str) -> str:
     """시·군·구 표시명.
     - 경기 광주시 → '경기도광주' (광주광역시 혼동 방지)
-    - 여러 시에 중복되는 구(_ambiguous_gu, 데이터 자동 판정) → '{시} {구}' (시 접두)
+    - 여러 상위 지역에 중복되는 구·군(_ambiguous_gu, 데이터 자동 판정)
+      → '{상위} {시군구}' 접두 (예: '부산 중구', '강원 고성군')
     """
     if prov == "경기" and city == "광주시":
         return "경기도광주"
@@ -127,15 +130,20 @@ def leafify(text: str, region: str) -> str:
 
 
 def _board_parts(board_title: str) -> tuple[str, str]:
-    """보드 → (main, specific). '스카이차 이용료' → ('스카이차', '이용료').
+    """보드 → (main, specific). '스카이차 임대' → ('스카이차', '임대').
 
     "스카이 작업차"는 특수 케이스: main = "스카이차" (단독 "스카이" 금지 정책).
-    단어가 1개면 specific = "" 반환.
+    "근처 스카이차"(2026-07-16 신규)도 특수: main = "스카이차", specific = "근처"
+      — 어순상 첫 단어가 "근처"라서 기본 split 을 쓰면 main="근처"가 되어
+      파생 키워드가 "신림동 근처"처럼 깨진다.
+    단어가 1개면 specific = "" 반환. 옛 보드(일대·요금·이용료)도 기존 글
+    backfill 호환 위해 계속 처리된다(기본 split 경로).
     """
     # 사장님 정책: "스카이" 단독 키워드 금지 — 항상 "스카이차"로 통일.
     BOARD_MAIN_OVERRIDE = {
         "스카이 작업차": ("스카이차", "작업차"),
         "고소작업차량":   ("고소작업차량", ""),
+        "근처 스카이차": ("스카이차", "근처"),
     }
     if board_title in BOARD_MAIN_OVERRIDE:
         return BOARD_MAIN_OVERRIDE[board_title]
@@ -256,6 +264,13 @@ if __name__ == "__main__":
         ("경기도광주", "스카이차 비용"),
         ("경기도광주 경안동", "스카이차"),
         ("경기 광주시", "스카이차 비용"),  # legacy 입력도 경기도광주로 정규화돼야 함
+        # 신규 보드 3종 (2026-07-16)
+        ("경기 수원시 탑동", "스카이차 임대"),
+        ("서울 관악구", "스카이차 업체"),
+        ("경기 화성시", "근처 스카이차"),   # main 이 "근처"가 아닌 "스카이차"여야 함
+        # 전국 확장으로 편입된 중복 군 (강원·경남 고성군 — 상위 접두 구분)
+        ("강원 고성군", "스카이차 임대"),
+        ("경남 고성군", "스카이차 업체"),
     ]
     for region, board in cases:
         kws = derive_keywords(region, board)

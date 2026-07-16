@@ -9,6 +9,7 @@
 INSERT OR IGNORE INTO sites (domain, site_name, phone) VALUES
   ('wormsz1.store', '아자스카이', '010-9249-0510');
 
+-- 보드 11개 = 초기 8 + 신규 3 (2026-07-16 사장님 확정 — seed.sql 과 동일 구성).
 INSERT OR IGNORE INTO boards (site_id, slug, title, display_order)
 SELECT s.id, b.slug, b.title, b.display_order
 FROM sites s
@@ -21,5 +22,8 @@ JOIN (
   UNION ALL SELECT '스카이차-가격',   '스카이차 가격',   6
   UNION ALL SELECT '스카이차-이용료', '스카이차 이용료', 7
   UNION ALL SELECT '고소작업차량',    '고소작업차량',    8
+  UNION ALL SELECT '스카이차-임대',   '스카이차 임대',   9
+  UNION ALL SELECT '스카이차-업체',   '스카이차 업체',  10
+  UNION ALL SELECT '근처-스카이차',   '근처 스카이차',  11
 ) b
 WHERE s.domain = 'wormsz1.store';

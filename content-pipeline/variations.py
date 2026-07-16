@@ -167,6 +167,11 @@ FAQ_POOL = {
     ],
 }
 
+# 신규 보드 3종 (2026-07-16) — 옛 보드 풀 승계 (일대→임대, 이용료→업체, 요금→근처).
+FAQ_POOL["스카이차 임대"] = list(FAQ_POOL["스카이차 일대"])
+FAQ_POOL["스카이차 업체"] = list(FAQ_POOL["스카이차 이용료"])
+FAQ_POOL["근처 스카이차"] = list(FAQ_POOL["스카이차 요금"])
+
 
 def pick_variation(board_title: str) -> dict:
     """매 발행마다 호출. 랜덤 voice + section titles + title pattern + length profile + FAQ."""
