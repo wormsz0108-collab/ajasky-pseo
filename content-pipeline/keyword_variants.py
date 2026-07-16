@@ -39,18 +39,45 @@ def _tokenize_region(region: str) -> dict[str, str]:
     return {"province": region, "city": "", "dong": ""}
 
 
-# 여러 시에 중복되는 일반 자치구명 — leaf 로 단독 사용 시 혼동되므로 시(광역)를 붙인다.
-_AMBIGUOUS_GU = {"동구", "서구", "남구", "북구", "중구"}
+# 여러 시(도시)에 중복되는 자치구명 → leaf 단독으로 쓰면 제목/H1/OG 가 도시 간 완전중복.
+# 하드코딩하지 않고 '실제 발행 대상 전체'(regions.all_region_targets — 시군구 + 법정동,
+# region_dongs/merge_admin_dongs 반영분 포함)에서 같은 '…구' 이름이 서로 다른 상위
+# 시(도시) 2곳 이상에 등장하면 '중복 구'로 자동 판정하여 시 접두를 붙인다.
+#   예) 강서구(서울·부산), 중구(서울·부산·대구·인천·대전·울산), 북구(부산·대구·광주·울산),
+#       서구/남구/동구 … → "서울 강서구", "부산 중구" 처럼 구분.
+#   전국 유일 구(강남구·수지구·분당구 등)는 1개 시에만 있어 접두 없이 leaf 유지.
+# 상위 시 표기는 데이터가 이미 광역 접미사 없는 짧은 형태(서울/부산)라 그대로 사용.
+# 순환 import·모듈로드 비용 회피를 위해 최초 사용 시 1회 런타임 계산·캐시.
+_AMBIGUOUS_GU_CACHE: set[str] | None = None
+
+
+def _ambiguous_gu() -> set[str]:
+    """발행 대상 데이터에서 2개 이상 상위 시(도시)에 중복 등장하는 자치구(…구) 집합.
+
+    같은 구 이름이 서로 다른 상위 토큰(시/광역시) 밑에 2번 이상 나타나면 중복으로 본다.
+    'i > 0' 조건으로 '대구'처럼 자체가 '구'로 끝나는 광역 접두 토큰은 후보에서 제외.
+    """
+    global _AMBIGUOUS_GU_CACHE
+    if _AMBIGUOUS_GU_CACHE is None:
+        from regions import all_region_targets
+        parents: dict[str, set[str]] = {}
+        for label, _rtype in all_region_targets():
+            toks = label.split()
+            for i, tok in enumerate(toks):
+                if i > 0 and tok.endswith("구"):
+                    parents.setdefault(tok, set()).add(toks[i - 1])
+        _AMBIGUOUS_GU_CACHE = {gu for gu, provs in parents.items() if len(provs) >= 2}
+    return _AMBIGUOUS_GU_CACHE
 
 
 def _city_disp(prov: str, city: str) -> str:
     """시·군·구 표시명.
     - 경기 광주시 → '경기도광주' (광주광역시 혼동 방지)
-    - 동구/서구/남구/북구/중구 → '{시} {구}' (여러 시 중복되므로 시 접두)
+    - 여러 시에 중복되는 구(_ambiguous_gu, 데이터 자동 판정) → '{시} {구}' (시 접두)
     """
     if prov == "경기" and city == "광주시":
         return "경기도광주"
-    if city in _AMBIGUOUS_GU and prov:
+    if city in _ambiguous_gu() and prov:
         return f"{prov} {city}"
     return city
 
