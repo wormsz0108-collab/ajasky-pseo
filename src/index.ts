@@ -315,7 +315,9 @@ function renderPost(opts: {
   pool: { slug: string; title: string; region: string }[];
 }) {
   const { site, boards, board, post, sections, faq, sameBoardPosts, pool } = opts;
-  const jsonLd = buildArticleJsonLd({ site, board, post, faq });
+  // 신규 발행분(본문에 제원 비교표 주입됨)만 Speakable 대상. 옛 글은 표가 없어 제외.
+  const hasSpecTable = post.body_md.includes('class="spec-table-wrap"');
+  const jsonLd = buildArticleJsonLd({ site, board, post, faq, hasSpecTable });
 
   // "서비스 지역" 칩 = 같은 보드의 실제 인근 지역 글로 내부링크 (시군구 1개당 1글, 최대 24).
   // 기존엔 50개가 전부 보드 목록으로 링크 → 색인/내부링크 시그널 약했음.

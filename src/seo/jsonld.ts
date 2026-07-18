@@ -84,28 +84,55 @@ interface BuildArticleLdInput {
     'published_at' | 'modified_at' | 'og_image_url'
   >;
   faq: { q: string; a: string }[];
+  // 제원 비교표가 본문에 있는 글(=신규 발행분)에만 Speakable 을 부여한다.
+  // 옛 글은 표·캡션이 없어 selector 가 비므로 아예 speakable 노드를 넣지 않는다.
+  hasSpecTable?: boolean;
+}
+
+// GEO 강화 #2 — Speakable 지정 대상 회전 후보. 글별(slug 해시)로 하나 선택.
+//   [0] 인트로 첫 문단(들)  #s1 = 첫 섹션 (markdown 파서가 anchor s1 부여)
+//   [1] 첫 FAQ 답변         .faq 첫 항목의 답변
+//   [2] 표 캡션             주입된 제원표의 <caption class="spec-caption">
+const SPEAKABLE_SELECTORS: string[][] = [
+  ['#s1 p'],
+  ['.faq .faq-item:first-child .faq-a'],
+  ['.spec-caption'],
+];
+
+function djb2(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h;
 }
 
 export function buildArticleJsonLd(input: BuildArticleLdInput) {
-  const { site, board, post, faq } = input;
+  const { site, board, post, faq, hasSpecTable } = input;
   const base = `https://${site.domain}`;
   const url = `${base}/${encodeURIComponent(board.slug)}/${encodeURIComponent(post.slug)}`;
   const img = absoluteImageUrl(post.og_image_url || site.og_image_url || `${base}/og-default.jpg`, site.domain);
 
+  const articleNode: Record<string, unknown> = {
+    '@type': 'Article',
+    headline: post.title,
+    description: post.meta_description,
+    datePublished: post.published_at,
+    dateModified: post.modified_at,
+    image: img,
+    mainEntityOfPage: url,
+    author: { '@type': 'Organization', name: site.site_name },
+    publisher: { '@id': `${base}/#org` },
+  };
+
+  // Speakable (GEO) — 신규 발행분(표 보유)에만. 글별 해시로 대상 1개 회전.
+  if (hasSpecTable) {
+    const sel = SPEAKABLE_SELECTORS[djb2(post.slug) % SPEAKABLE_SELECTORS.length];
+    articleNode.speakable = { '@type': 'SpeakableSpecification', cssSelector: sel };
+  }
+
   const graph: object[] = [
     websiteNode(site),
     orgNode(site),
-    {
-      '@type': 'Article',
-      headline: post.title,
-      description: post.meta_description,
-      datePublished: post.published_at,
-      dateModified: post.modified_at,
-      image: img,
-      mainEntityOfPage: url,
-      author: { '@type': 'Organization', name: site.site_name },
-      publisher: { '@id': `${base}/#org` },
-    },
+    articleNode,
     {
       '@type': 'BreadcrumbList',
       itemListElement: [

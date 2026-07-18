@@ -26,6 +26,7 @@ from og_compose import compose_for_site
 from publish import publish, slugify_ko
 from r2_client import get_object, put_object
 from regions import all_region_targets
+from spec_table import inject_spec_table
 
 import requests as _requests
 
@@ -344,6 +345,12 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
     slug = slugify_ko(f"{region}-{board_title}-{longtail}")[:280]
     og_url = build_og(slug, region, board_title)
 
+    # GEO 강화 #1 — 차종 제원 비교표 주입 (앞으로 발행분부터). slug 를 글별 시드로 써
+    # 결정적·글마다 다른 표. 확정 제원(1톤 20m/12m · 3톤 30m/23m · 5톤 45m/28m)만 사용.
+    # 표는 curated 상수라 generate.py BANNED_RE 게이트가 아닌 spec_table 자체 게이트로 검증됨
+    # (산문·표 모두 3톤 통일 — 3.5톤/굴절 등 미보유 표기는 양쪽 게이트에서 차단).
+    body_md = inject_spec_table(generated["body_md"], slug, region)
+
     # meta_keywords 는 Gemini 출력 무시하고 derive_keywords 로 통일.
     # 사용자가 "관악구스카이차" / "관악구 스카이차" / "서울 관악구 스카이차" 등
     # 어떻게 쳐도 매칭되도록 자동 변형 생성. 상한 22개(derive_keywords 내부).
@@ -360,7 +367,7 @@ def build_payload(region: str, region_type: str, board_slug: str, board_title: s
         "region_type": region_type,
         "meta_description": generated["meta_description"],
         "meta_keywords": meta_keywords,
-        "body_md": generated["body_md"],
+        "body_md": body_md,
         "toc_json": json.dumps(generated.get("toc", []), ensure_ascii=False),
         "faq_json": json.dumps(generated.get("faq", []), ensure_ascii=False),
         "og_image_url": og_url,

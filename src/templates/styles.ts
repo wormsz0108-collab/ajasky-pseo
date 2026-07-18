@@ -78,6 +78,17 @@ section p{margin:12px 0;color:var(--text-soft)}
 section ul,section ol{margin:10px 0 14px;padding-left:22px;color:var(--text-soft)}
 section li{margin:4px 0}
 
+/* 차종 제원 비교표 (GEO) */
+.spec-table-wrap{margin:20px 0 24px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.spec-table{width:100%;border-collapse:collapse;font-size:14px;min-width:340px;border:1px solid var(--line)}
+.spec-table caption.spec-caption{caption-side:top;text-align:left;font-size:13px;font-weight:700;color:var(--text-soft);padding:0 2px 10px;letter-spacing:-.01em}
+.spec-table th,.spec-table td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.spec-table thead th{background:var(--bg-soft);color:var(--text);font-weight:700;font-size:13px;border-bottom:2px solid var(--line-strong);white-space:nowrap}
+.spec-table tbody th[scope=row]{font-weight:700;color:var(--text);white-space:nowrap}
+.spec-table tbody td{color:var(--text-soft)}
+.spec-table tbody tr:last-child th,.spec-table tbody tr:last-child td{border-bottom:0}
+.spec-table tbody tr:nth-child(even){background:rgba(0,0,0,.015)}
+
 /* CTA card */
 .cta-card{margin:36px 0;padding:18px 22px;background:linear-gradient(135deg,#fdf2f8 0%,#fff 100%);border:1px solid #fbcfe8;border-radius:var(--radius);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .cta-card .text{flex:1;min-width:200px}
