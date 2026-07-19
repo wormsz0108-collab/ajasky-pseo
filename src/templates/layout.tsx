@@ -3,6 +3,7 @@ import type { Site, Board } from '../types';
 import { STYLES } from './styles';
 import { pickTheme } from './theme';
 import { absoluteImageUrl } from '../lib/url';
+import { QUOTE_GUIDE_URL_PATH } from '../lib/routes';
 
 interface LayoutProps {
   site: Site;
@@ -99,6 +100,7 @@ ${jsonLd ? html`<script type="application/ld+json">${raw(
   <div class="top-inner">
     <a class="logo" href="/"><span class="dot"></span>${site.site_name}</a>
     <nav class="nav">
+      <a href="${QUOTE_GUIDE_URL_PATH}">견적 가이드</a>
       ${boards.map(b => html`
         <a href="/${encodeURIComponent(b.slug)}" class="${activeBoardSlug === b.slug ? 'on' : ''}">${b.title}</a>
       `)}
@@ -120,7 +122,7 @@ ${children}
     </div>
     <div>
       <h4>안내</h4>
-      <p>현장 사진을 보내주시면 정확한 견적이 빠릅니다.<br>24시 전국 출장 가능.</p>
+      <p><a href="${QUOTE_GUIDE_URL_PATH}">스카이차 견적 준비 가이드</a><br>현장 사진을 보내주시면 정확한 견적이 빠릅니다.</p>
     </div>
   </div>
   <div class="f-biz">

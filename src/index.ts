@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import type { Env, Site, Board, Post, Variables } from './types';
 import { HomePage } from './templates/home';
+import { GUIDE_FAQ, QuoteGuidePage } from './templates/guide';
 import { BoardPage } from './templates/board';
 import { PostPage } from './templates/post';
-import { buildArticleJsonLd, buildHomeJsonLd, buildBoardJsonLd } from './seo/jsonld';
+import { buildArticleJsonLd, buildHomeJsonLd, buildBoardJsonLd, buildGuideJsonLd } from './seo/jsonld';
 import {
   renderSitemapIndex, renderPagesSitemap, renderBoardsSitemap, renderPostsSitemap,
 } from './seo/sitemap';
@@ -21,6 +22,7 @@ import {
   buildDummyPost, buildDummySections, buildDummyFaq,
 } from './lib/dummy';
 import { recoveryCron } from './cron/recovery';
+import { QUOTE_GUIDE_SLUG } from './lib/routes';
 
 const POSTS_PER_PAGE = 20;
 
@@ -191,6 +193,12 @@ app.get('/:boardSlug', async (c) => {
     return new Response(xml, { headers: xmlHeaders });
   }
 
+  if (boardSlug === QUOTE_GUIDE_SLUG) {
+    const boards = await getBoards(c.env, site.id);
+    const jsonLd = buildGuideJsonLd(site, GUIDE_FAQ);
+    return c.html(QuoteGuidePage({ site, boards, jsonLd }) as any);
+  }
+
   if (
     boardSlug.startsWith('_') ||
     boardSlug.includes('.') ||
@@ -242,9 +250,12 @@ app.get('/:boardSlug/:postSlug', async (c) => {
   const postSlug = decodeURIComponent(c.req.param('postSlug'));
 
   // 엣지 캐시: 글 페이지는 거의 안 바뀌므로 Cache API 로 1시간 캐시.
+  // 배포 버전을 키에 포함해 템플릿 변경 시 이전 HTML 캐시를 즉시 우회한다.
   // (홈·보드는 새 글 즉시 반영 위해 캐시 안 함.) Host 가 URL에 포함돼 도메인별 분리됨.
   const cache = caches.default;
-  const cacheKey = new Request(c.req.url, { method: 'GET' });
+  const cacheUrl = new URL(c.req.url);
+  cacheUrl.searchParams.set('__cv', '20260719-quote-guide-v1');
+  const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 

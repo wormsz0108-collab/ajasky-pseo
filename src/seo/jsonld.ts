@@ -33,6 +33,59 @@ export function buildHomeJsonLd(site: Site) {
   };
 }
 
+export function buildGuideJsonLd(site: Site, faq: { q: string; a: string }[]) {
+  const base = `https://${site.domain}`;
+  const path = `/${encodeURIComponent('스카이차-견적-가이드')}`;
+  const url = `${base}${path}`;
+  const nationwide = site.domain === 'ajasky.co.kr';
+  const name = nationwide
+    ? '전국 스카이차 비용·가격·요금 현장 견적 준비 가이드'
+    : '스카이차 비용·가격·요금 현장 견적 준비 가이드';
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      websiteNode(site),
+      orgNode(site),
+      {
+        '@type': 'WebPage',
+        '@id': `${url}#page`,
+        url,
+        name,
+        description: '현장 주소, 높이, 수평 반경, 진입 조건, 작업 내용과 일정을 정리해 스카이차 견적 상담을 준비하는 방법입니다.',
+        inLanguage: 'ko-KR',
+        isPartOf: { '@id': `${base}/#website` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '홈', item: `${base}/` },
+          { '@type': 'ListItem', position: 2, name: '스카이차 견적 준비 가이드', item: url },
+        ],
+      },
+      {
+        '@type': 'HowTo',
+        name: '스카이차 견적 상담 준비 방법',
+        description: '현장 조건을 정리해 스카이차 상담을 준비하는 순서입니다.',
+        step: [
+          { '@type': 'HowToStep', position: 1, name: '주소와 높이 확인', text: '정확한 현장 주소와 건물 층수 또는 작업 높이를 확인합니다.' },
+          { '@type': 'HowToStep', position: 2, name: '진입 조건 촬영', text: '진입로와 차량 설치 공간, 작업 지점이 보이도록 사진을 준비합니다.' },
+          { '@type': 'HowToStep', position: 3, name: '작업량 정리', text: '작업 종류와 예상 작업량, 소요 시간을 정리합니다.' },
+          { '@type': 'HowToStep', position: 4, name: '일정 전달', text: '희망 날짜와 시작 시간, 통제 가능 여부를 전달합니다.' },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: faq.map(f => ({
+          '@type': 'Question',
+          name: f.q,
+          acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+      },
+    ],
+  };
+}
+
 interface BuildBoardLdInput {
   site: Site;
   board: Pick<Board, 'slug' | 'title' | 'description'>;

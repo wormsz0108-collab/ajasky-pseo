@@ -1,4 +1,5 @@
 import type { Env, Site } from '../types';
+import { QUOTE_GUIDE_PATH } from '../lib/routes';
 
 export const POSTS_PER_SITEMAP = 1000;
 
@@ -86,6 +87,7 @@ export async function renderSitemapIndex(env: Env, site: Site): Promise<string> 
 export function renderPagesSitemap(site: Site): string {
   return buildUrlSet([
     { loc: urlFor(site, '/'), changefreq: 'daily', priority: 1.0, lastmod: nowIso() },
+    { loc: urlFor(site, QUOTE_GUIDE_PATH), changefreq: 'weekly', priority: 0.9, lastmod: nowIso() },
   ]);
 }
 
